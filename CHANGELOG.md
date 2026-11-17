@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.18
+- Settings: Rewrote the 23 LunaLib setting descriptions in the author's wording. Same facts, numbers and setting names.
+- Mod info: Rewrote the launcher description in the author's wording.
+- Settings file: Rewrote the 2 comment lines in data/config/better_autopilot.json.
+- README: Rewrote the docs in the author's wording. Same facts. A gate route is now listed as tested in game.
+
 ## 0.1.17
 - Reverse Polarity: Fixed Reverse Polarity turned on by the mod never being turned off inside a slipstream.
 - Reverse Polarity: The limit of 2 paid switches per slipstream also counts switches at the stream's faint edges.
