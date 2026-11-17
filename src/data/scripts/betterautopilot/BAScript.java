@@ -240,14 +240,15 @@ public class BAScript implements EveryFrameScript {
     }
 
     /**
-     * Targets the steering works for: planets and stars, jump points, gates, a star system's hyperspace anchor (a course
-     * to a system), and a point in space (the game's location token, named "unknown location", for a course to a place).
-     * Stations, fleets and other objects are left to the player, so fights and close maneuvers are never steered.
+     * Targets the steering works for: planets and stars, jump points, gates, gate beacons (BAGates.beacon), a star
+     * system's hyperspace anchor (a course to a system), and a point in space (the game's location token, named "unknown
+     * location", for a course to a place). Stations, fleets and other objects are left to the player, so fights and close
+     * maneuvers are never steered.
      */
     static boolean travelTarget(SectorEntityToken e) {
         if (e instanceof PlanetAPI || e instanceof JumpPointAPI) return true;
         if (pointToken(e)) return true;
-        if (e.hasTag(Tags.GATE)) return true;
+        if (e.hasTag(Tags.GATE) || BAGates.beacon(e)) return true;
         for (StarSystemAPI sys : Global.getSector().getStarSystems()) {
             if (sys.getHyperspaceAnchor() == e) return true;
         }
@@ -266,7 +267,7 @@ public class BAScript implements EveryFrameScript {
      */
     static boolean hazardousTarget(SectorEntityToken e) {
         if (e instanceof PlanetAPI) return ((PlanetAPI) e).isStar() || ((PlanetAPI) e).isBlackHole();
-        if (e instanceof JumpPointAPI || e.hasTag(Tags.GATE)) return false;
+        if (e instanceof JumpPointAPI || e.hasTag(Tags.GATE) || BAGates.beacon(e)) return false;
         return true;
     }
 

@@ -31,7 +31,8 @@ import java.util.List;
  * Routes laid-in courses through gates when the way through two gates of one network is shorter: course to the entry
  * gate, the transit (the network's own, same costs), then the course to the target again. Networks: the game's gates
  * (once the game offers "Travel through the Gate": $gatesActive and $playerCanUseGates) and AoTD's Bifrost gates (with
- * a Bifrost Control Center). Each new course target is planned once. A course laid in again for the same target flies
+ * a Bifrost Control Center). The game's network also exits at gate beacons (non-gate places in its list of gate
+ * destinations, such as a Random Assortment of Things settlement with a Gate Beacon). Each new course target is planned once. A course laid in again for the same target flies
  * direct. A route under way is kept in the player fleet's memory, so it continues after a save load.
  */
 public final class BAGates {
@@ -145,7 +146,7 @@ public final class BAGates {
                 return;
             }
             if (course == entry) {
-                if (!usable(entry, bifrost) || !usable(exit, bifrost)) {
+                if (!usable(entry, bifrost) || !exitUsable(exit, bifrost)) {
                     LOG.info("Auto-er Pilot: gate route to " + goal.getName() + " ended: a gate can not be used now; course laid in for it");
                     finish();
                     return;
@@ -248,11 +249,11 @@ public final class BAGates {
         m.set(K_EXIT, exit);
         m.set(K_BIFROST, bifrost);
         LOG.info("Auto-er Pilot: " + (bifrost ? "Bifrost" : "gate") + " route to " + target.getName() + ": " + where(entry)
-                + " to " + where(exit) + ", " + Math.round(r.via) + " units, direct "
+                + " to " + where(exit) + (beacon(exit) ? " (gate beacon)" : "") + ", " + Math.round(r.via) + " units, direct "
                 + (direct == Float.MAX_VALUE ? "no way" : Math.round(direct) + " units"));
     }
 
-    /** The shortest way from f to t through two gates of one network, or null. */
+    /** The shortest way from f to t through two gates of one network, or null. A gate beacon is an exit only. */
     static Route best(Place f, Place t, List<SectorEntityToken> gates, boolean bf) {
         int n = gates.size();
         if (n < 2) return null;
@@ -260,7 +261,7 @@ public final class BAGates {
         Place[] g = new Place[n];
         for (int i = 0; i < n; i++) {
             g[i] = Place.of(gates.get(i));
-            to[i] = leg(f, g[i]);
+            to[i] = !bf && beacon(gates.get(i)) ? Float.MAX_VALUE : leg(f, g[i]);
             from[i] = leg(g[i], t);
         }
         int[] p = BAGeom.bestPair(to, from);
@@ -298,7 +299,7 @@ public final class BAGates {
             if (!usable(entry, true) || !usable(exit, true)) return "a Bifrost gate is cooling down or not supplied";
         } else {
             if (!gameGatesOpen()) return "gates not usable";
-            if (!usable(entry, false) || !usable(exit, false)) return "a gate is not active";
+            if (!usable(entry, false) || !exitUsable(exit, false)) return "a gate is not active";
             int cost = GateCMD.computeFuelCost(exit);
             if (cost > Global.getSector().getPlayerFleet().getCargo().getFuel()) return "not enough fuel (" + cost + ")";
         }
@@ -350,7 +351,7 @@ public final class BAGates {
     static void showBeingUsed(SectorEntityToken gate, float distLY) {
         Object p = gate.getCustomPlugin();
         if (p instanceof GateEntityPlugin) { ((GateEntityPlugin) p).showBeingUsed(distLY); return; }
-        if (p == null) return;
+        if (p == null || beacon(gate)) return;
         try {
             MethodHandle h = MethodHandles.publicLookup().findVirtual(p.getClass(), "showBeingUsed",
                     MethodType.methodType(void.class, float.class));
@@ -415,14 +416,30 @@ public final class BAGates {
         return false;
     }
 
-    /** Scanned, active gates of the game, once the game lets the player use them. */
+    /** Scanned, active gates of the game and gate beacons, once the game lets the player use gates. */
     static List<SectorEntityToken> gameGates() {
         if (!gameGatesOpen()) return Collections.emptyList();
         List<SectorEntityToken> out = new ArrayList<SectorEntityToken>();
         for (SectorEntityToken g : GateEntityPlugin.getGateData().scanned) {
-            if (usable(g, false)) out.add(g);
+            if (usable(g, false) || beacon(g)) out.add(g);
         }
         return out;
+    }
+
+    /**
+     * A gate beacon: a place in the game's list of gate destinations that is not a gate. Random Assortment of Things adds
+     * a Frontiers settlement with a Gate Beacon to the list. The game's gate dialog offers it as a destination, so it is
+     * an exit of the game's network, never an entry.
+     */
+    static boolean beacon(SectorEntityToken e) {
+        if (e == null || e.isExpired() || e.getContainingLocation() == null) return false;
+        if (e.getCustomPlugin() instanceof GateEntityPlugin) return false;
+        return GateEntityPlugin.getGateData().scanned.contains(e);
+    }
+
+    /** An exit that can take a transit now: a usable gate of the network, or a gate beacon on the game's network. */
+    static boolean exitUsable(SectorEntityToken g, boolean bf) {
+        return usable(g, bf) || (!bf && beacon(g));
     }
 
     /** Bifrost gates that can be used now, with a Bifrost Control Center. */

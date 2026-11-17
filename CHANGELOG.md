@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.16
+- Gates: Gate routes can end at a gate beacon, such as a Random Assortment of Things settlement with a Gate Beacon. A beacon is an exit only, as in the gate dialog.
+- Targets: A course to a gate beacon is steered, as a course to a gate is.
+
 ## 0.1.15
 - Forum: Added the forum topic to the README and the Version Checker file.
 
