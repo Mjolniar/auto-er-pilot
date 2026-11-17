@@ -1,7 +1,7 @@
 # Auto-er Pilot
 
 > [!WARNING]
-> AI-generated. The mod, docs and build checks were written by AI coding agents. I've checked it offline (compile, bytecode checks, steering math against a copy of the game's fleet movement) and I've had the storm slow-down and detour, slipstream rides, Reverse Polarity before a slipstream crossing, Sustained Burn on long trips and a gate route running in my own game. I haven't had the chance to test jumps without the dialog, gate beacon and Bifrost routes, the stop outside stars, or crossing a slipstream without Reverse Polarity in a real game yet. If you hit a bug, open an [issue](https://github.com/Mjolniar/auto-er-pilot/issues) with `starsector-core/starsector.log` and your modlist.
+> AI-generated. The mod, docs and build checks were written by AI coding agents. If you hit a bug, open an [issue](https://github.com/Mjolniar/auto-er-pilot/issues) with `starsector-core/starsector.log` and your modlist.
 
 - Scope: It works while your fleet is flying itself to a planet, star, jump point, gate, gate beacon, star system or a point in space (a course to a place), from a laid-in course or a click. It never steers for stations, fleets or other objects, so fights and close maneuvers stay manual. Clicking on empty space is you flying by hand.
 - Taking control back: Holding a mouse button, the go-slow key, Sensor Burst, Interdiction Pulse, a dialog, a battle or a jump gives you control back for that moment. The speed-up key and Go Dark don't. It only changes your course at a hazardous target and for a gate route (below).
