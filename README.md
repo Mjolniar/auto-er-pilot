@@ -27,6 +27,7 @@
 - Autopilot With Gates: Compatible. While its ability is on, its gate routes are followed point by point and this mod's gate routes are off.
 - Settings: In the LunaLib menu when LunaLib is enabled, otherwise `data/config/better_autopilot.json`. Every behavior has its own switch.
 - Log: Nothing on screen. With Debug log on, `starsector.log` gets each steering change, the reason when it does not steer, the obstacles found for each target and a status line every 10 seconds.
+- Forum: [topic 36441](https://fractalsoftworks.com/forum/index.php?topic=36441.0).
 - Patch notes: [changelog](CHANGELOG.md).
 
 ## Install

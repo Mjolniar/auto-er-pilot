@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.15
+- Forum: Added the forum topic to the README and the Version Checker file.
+
 ## 0.1.14
 - Name: Renamed from Better Autopilot to Auto-er Pilot. The mod id, settings and saves are unchanged.
 - Log: Log lines start with "Auto-er Pilot:".
