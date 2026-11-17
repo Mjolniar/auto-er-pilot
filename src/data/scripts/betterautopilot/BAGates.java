@@ -21,19 +21,23 @@ import org.apache.log4j.Logger;
 import org.lwjgl.util.vector.Vector2f;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.ref.WeakReference;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Routes laid-in courses through gates when the way through two gates of one network is shorter: course to the entry
  * gate, the transit (the network's own, same costs), then the course to the target again. Networks: the game's gates
  * (once the game offers "Travel through the Gate": $gatesActive and $playerCanUseGates) and AoTD's Bifrost gates (with
  * a Bifrost Control Center). The game's network also exits at gate beacons (non-gate places in its list of gate
- * destinations, such as a Random Assortment of Things settlement with a Gate Beacon). Each new course target is planned once. A course laid in again for the same target flies
- * direct. A route under way is kept in the player fleet's memory, so it continues after a save load.
+ * destinations, such as a Random Assortment of Things settlement with a Gate Beacon). Each new course target is planned
+ * once. A course laid in again for the same target while its route is under way flies direct. A route under way is kept
+ * in the player fleet's memory, so it continues after a save load.
  */
 public final class BAGates {
     private BAGates() { }
@@ -63,9 +67,21 @@ public final class BAGates {
 
     static final int NONE = 0, TO_ENTRY = 1, TRANSIT = 2;
     static int stage = NONE;
-    /** The last course target planned for: planned once per new target. */
-    static SectorEntityToken planned;
-    static SectorEntityToken goal, entry, exit;
+    /**
+     * The last course target planned for (planned once per new target), and the target, entry and exit of the route
+     * under way. Held weakly: a static strong reference would keep an old save's sector in memory after quitting to the
+     * menu or while another save loads. The route's places are also in the player fleet's memory, which holds them.
+     */
+    private static WeakReference<SectorEntityToken> plannedRef = none(), goalRef = none(), entryRef = none(), exitRef = none();
+    private static WeakReference<SectorEntityToken> none() { return new WeakReference<SectorEntityToken>(null); }
+    static SectorEntityToken planned() { return plannedRef.get(); }
+    static SectorEntityToken goal() { return goalRef.get(); }
+    static SectorEntityToken entry() { return entryRef.get(); }
+    static SectorEntityToken exit() { return exitRef.get(); }
+    static void setPlanned(SectorEntityToken e) { plannedRef = new WeakReference<SectorEntityToken>(e); }
+    static void setGoal(SectorEntityToken e) { goalRef = new WeakReference<SectorEntityToken>(e); }
+    static void setEntry(SectorEntityToken e) { entryRef = new WeakReference<SectorEntityToken>(e); }
+    static void setExit(SectorEntityToken e) { exitRef = new WeakReference<SectorEntityToken>(e); }
     /** The route uses Bifrost gates. */
     static boolean bifrost;
     static float waited;
@@ -74,15 +90,18 @@ public final class BAGates {
     static final float PLAN_HOLD = 5f;
     /** Lay in the course to goal once no dialog is open (the gate dialog was shown instead of the transit). */
     static boolean restoreGoal;
+    /** The route was taken up from the save this frame (load); its first advance lays in a missing course. */
+    static boolean fromSave;
     private static boolean awgNoted;
 
     static void reset() {
         stage = NONE;
-        planned = goal = entry = exit = null;
+        setPlanned(null); setGoal(null); setEntry(null); setExit(null);
         bifrost = false;
         waited = 0f;
         holdPlan = 0f;
         restoreGoal = false;
+        fromSave = false;
         awgNoted = false;
     }
 
@@ -94,13 +113,14 @@ public final class BAGates {
         MemoryAPI m = fleet.getMemoryWithoutUpdate();
         Object g = m.get(K_GOAL), a = m.get(K_ENTRY), b = m.get(K_EXIT);
         if (g instanceof SectorEntityToken && a instanceof SectorEntityToken && b instanceof SectorEntityToken) {
-            goal = (SectorEntityToken) g;
-            entry = (SectorEntityToken) a;
-            exit = (SectorEntityToken) b;
+            setGoal((SectorEntityToken) g);
+            setEntry((SectorEntityToken) a);
+            setExit((SectorEntityToken) b);
             bifrost = Boolean.TRUE.equals(m.get(K_BIFROST));
             stage = TO_ENTRY;
-            planned = entry;
-            LOG.info("Auto-er Pilot: gate route to " + goal.getName() + " taken up from the save: " + where(entry) + " to " + where(exit));
+            fromSave = true;
+            setPlanned(entry());
+            LOG.info("Auto-er Pilot: gate route to " + goal().getName() + " taken up from the save: " + where(entry()) + " to " + where(exit()));
         } else {
             unsetMemory(m);
         }
@@ -108,10 +128,18 @@ public final class BAGates {
 
     /** Every unpaused frame, also with the mod or gate routing off (a route under way still gets its course back). */
     static void advance(CampaignFleetAPI fleet, CampaignUIAPI ui, float amount) {
+        if (holdPlan > 0f) holdPlan -= amount;
+        boolean saved = fromSave;
+        fromSave = false;
+        if (stage != NONE && (goal() == null || entry() == null || exit() == null)) {
+            LOG.info("Auto-er Pilot: gate route dropped: its target or a gate is gone");
+            restoreGoal = false;
+            clear();
+        }
         if (restoreGoal) {
             if (ui.isShowingDialog()) return;
             restoreGoal = false;
-            SectorEntityToken g = goal;
+            SectorEntityToken g = goal();
             clear();
             layIn(g);
         }
@@ -119,74 +147,85 @@ public final class BAGates {
         if (stage == TRANSIT) {
             waited += amount;
             if (throughGate(fleet)) {
-                LOG.info("Auto-er Pilot: through the gate to " + where(exit) + "; course laid in for " + goal.getName());
+                LOG.info("Auto-er Pilot: through the gate to " + where(exit()) + "; course laid in for " + goal().getName());
                 finish();
             } else if (course != null) {
-                LOG.info("Auto-er Pilot: gate route to " + goal.getName() + " ended: new course");
-                planned = course == goal ? goal : null;   // the same target again: direct
+                LOG.info("Auto-er Pilot: gate route to " + goal().getName() + " ended: new course");
+                setPlanned(course == goal() ? goal() : null);   // the same target again: direct
                 holdPlan = PLAN_HOLD;                      // planned from where the fleet comes out
                 clear();
             } else if (waited > TRANSIT_WAIT) {
-                LOG.info("Auto-er Pilot: gate transit did not happen; course laid in for " + goal.getName());
+                LOG.info("Auto-er Pilot: gate transit did not happen; course laid in for " + goal().getName());
                 finish();
             }
             return;
         }
         boolean on = BASettings.enabled && BASettings.gates;
         if (stage == TO_ENTRY) {
-            if (course == null && throughGate(fleet)) {
-                // saved during the transit: the fleet is at the exit gate
-                LOG.info("Auto-er Pilot: at " + where(exit) + "; course laid in for " + goal.getName());
+            if (course == null && (saved || throughGate(fleet))) {
+                // saved during the transit (the fleet is at the exit gate), or saved with no course while the route waited
+                // for its course back: the course to the target is laid in
+                LOG.info("Auto-er Pilot: " + (saved ? "route taken up from the save without a course" : "at " + where(exit()))
+                        + "; course laid in for " + goal().getName());
                 finish();
                 return;
             }
             if (!on) {
-                LOG.info("Auto-er Pilot: gate route to " + goal.getName() + " ended: gate routing off; course laid in for it");
+                LOG.info("Auto-er Pilot: gate route to " + goal().getName() + " ended: gate routing off; course laid in for it");
                 finish();
                 return;
             }
-            if (course == entry) {
-                if (!usable(entry, bifrost) || !exitUsable(exit, bifrost)) {
-                    LOG.info("Auto-er Pilot: gate route to " + goal.getName() + " ended: a gate can not be used now; course laid in for it");
+            if (course == entry()) {
+                if (!usable(entry(), bifrost) || !exitUsable(exit(), bifrost)) {
+                    LOG.info("Auto-er Pilot: gate route to " + goal().getName() + " ended: a gate can not be used now; course laid in for it");
                     finish();
                     return;
                 }
                 // the gate's dialog opens on arrival (pickDialog). At the gate on the course, not flying by hand, and still
-                // no dialog after ARRIVAL_WAIT: open it here.
-                if (!near(fleet, entry) || ui.isFollowingDirectCommand() || fleet.getInteractionTarget() != entry) { waited = 0f; return; }
+                // no dialog after ARRIVAL_WAIT: open it here. At the gate with no interaction target after ARRIVAL_WAIT: a
+                // dialog at the gate closed without the transit (another dialog, or the player left it), so the route ends
+                // and the course to the target is laid in.
+                if (!near(fleet, entry()) || ui.isFollowingDirectCommand()) { waited = 0f; return; }
+                SectorEntityToken it = fleet.getInteractionTarget();
+                if (it != entry() && it != null) { waited = 0f; return; }
                 waited += amount;
                 if (waited < ARRIVAL_WAIT || ui.isShowingDialog()) return;
                 waited = 0f;
-                String why = blocked();
-                if (why != null) {
-                    LOG.info("Auto-er Pilot: no transit at " + where(entry) + ": " + why + "; course laid in for " + goal.getName());
+                if (it == null) {
+                    LOG.info("Auto-er Pilot: no transit at " + where(entry()) + ": the gate's dialog closed; course laid in for " + goal().getName());
                     finish();
                     return;
                 }
-                ui.showInteractionDialog(new BAGateDialog(), entry);
+                String why = blocked();
+                if (why != null) {
+                    LOG.info("Auto-er Pilot: no transit at " + where(entry()) + ": " + why + "; course laid in for " + goal().getName());
+                    finish();
+                    return;
+                }
+                ui.showInteractionDialog(new BAGateDialog(), entry());
                 return;
             }
             // the player laid in another course or cleared it
-            LOG.info("Auto-er Pilot: gate route to " + goal.getName() + " ended: course changed");
-            planned = course == goal ? goal : null;   // the same target again: direct this time
+            LOG.info("Auto-er Pilot: gate route to " + goal().getName() + " ended: course changed");
+            setPlanned(course == goal() ? goal() : null);   // the same target again: direct this time
             clear();
         }
-        if (course == null) { planned = null; return; }
-        if (course == planned) return;
-        if (!on) { planned = course; return; }
-        if (holdPlan > 0f) { holdPlan -= amount; return; }
+        if (course == null) { setPlanned(null); return; }
+        if (course == planned()) return;
+        if (!on) { setPlanned(course); return; }
+        if (holdPlan > 0f) return;
         if (fleet.isInHyperspaceTransition()) return;   // plan once the jump is over, from where the fleet comes out
-        planned = course;
+        setPlanned(course);
         plan(fleet, ui, course);
     }
 
     /** After an error: the route is dropped, the course to its target laid in again, the current target not planned again. */
     static void error(CampaignUIAPI ui) {
-        SectorEntityToken g = goal;
+        SectorEntityToken g = goal();
         stage = NONE;
         restoreGoal = false;
-        try { clear(); } catch (Throwable t) { goal = entry = exit = null; }
-        planned = ui.getUltimateCourseTarget();
+        try { clear(); } catch (Throwable t) { setGoal(null); setEntry(null); setExit(null); }
+        setPlanned(ui.getUltimateCourseTarget());
         if (g != null) {
             try { layIn(g); } catch (Throwable t) { }
         }
@@ -226,30 +265,30 @@ public final class BAGates {
             LOG.info("Auto-er Pilot: no gate route to " + target.getName() + ": needs about " + Math.round(need) + " fuel");
             return;
         }
-        goal = target;
-        entry = r.in;
-        exit = r.out;
+        setGoal(target);
+        setEntry(r.in);
+        setExit(r.out);
         bifrost = r.bf;
         stage = TO_ENTRY;
         waited = 0f;
-        planned = entry;
-        Global.getSector().layInCourseFor(entry);
+        setPlanned(entry());
+        Global.getSector().layInCourseFor(entry());
         SectorEntityToken next = null;
-        try { next = ui.getNextStepForCourse(entry); } catch (Throwable e) { next = entry; }
+        try { next = ui.getNextStepForCourse(entry()); } catch (Throwable e) { next = entry(); }
         if (next == null) {
-            LOG.info("Auto-er Pilot: no gate route to " + target.getName() + ": the game finds no course to " + where(entry));
-            SectorEntityToken g = goal;
+            LOG.info("Auto-er Pilot: no gate route to " + target.getName() + ": the game finds no course to " + where(entry()));
+            SectorEntityToken g = goal();
             clear();
             layIn(g);
             return;
         }
         MemoryAPI m = fleet.getMemoryWithoutUpdate();
-        m.set(K_GOAL, goal);
-        m.set(K_ENTRY, entry);
-        m.set(K_EXIT, exit);
+        m.set(K_GOAL, goal());
+        m.set(K_ENTRY, entry());
+        m.set(K_EXIT, exit());
         m.set(K_BIFROST, bifrost);
-        LOG.info("Auto-er Pilot: " + (bifrost ? "Bifrost" : "gate") + " route to " + target.getName() + ": " + where(entry)
-                + " to " + where(exit) + (beacon(exit) ? " (gate beacon)" : "") + ", " + Math.round(r.via) + " units, direct "
+        LOG.info("Auto-er Pilot: " + (bifrost ? "Bifrost" : "gate") + " route to " + target.getName() + ": " + where(entry())
+                + " to " + where(exit()) + (beacon(exit()) ? " (gate beacon)" : "") + ", " + Math.round(r.via) + " units, direct "
                 + (direct == Float.MAX_VALUE ? "no way" : Math.round(direct) + " units"));
     }
 
@@ -278,12 +317,12 @@ public final class BAGates {
 
     /** The dialog for the entry gate on arrival: the transit, or null (the gate's own dialog) when it can not go now. */
     static InteractionDialogPlugin pickDialog(SectorEntityToken target) {
-        if (stage != TO_ENTRY || target == null || target != entry) return null;
+        if (stage != TO_ENTRY || target == null || target != entry()) return null;
         CampaignFleetAPI fleet = Global.getSector().getPlayerFleet();
-        if (fleet == null || !near(fleet, entry)) return null;
+        if (fleet == null || !near(fleet, entry())) return null;
         String why = blocked();
         if (why != null) {
-            LOG.info("Auto-er Pilot: gate dialog shown at " + where(entry) + ": " + why + "; course for " + goal.getName() + " laid in after");
+            LOG.info("Auto-er Pilot: gate dialog shown at " + where(entry()) + ": " + why + "; course for " + goal().getName() + " laid in after");
             stage = NONE;
             restoreGoal = true;
             return null;
@@ -296,14 +335,16 @@ public final class BAGates {
         if (!BASettings.enabled || !BASettings.gates) return "gate routing off";
         if (bifrost) {
             if (!bifrostOpen()) return "Bifrost network not usable (no Bifrost Control Center, or the setting is off)";
-            if (!usable(entry, true) || !usable(exit, true)) return "a Bifrost gate is cooling down or not supplied";
+            if (!usable(entry(), true) || !usable(exit(), true)) return "a Bifrost gate is cooling down or not supplied";
+            Set<SectorEntityToken> act = bifrostActive();
+            if (act != null && (!act.contains(entry()) || !act.contains(exit()))) return "a Bifrost gate's section is not active";
         } else {
             if (!gameGatesOpen()) return "gates not usable";
-            if (!usable(entry, false) || !exitUsable(exit, false)) return "a gate is not active";
-            int cost = GateCMD.computeFuelCost(exit);
+            if (!usable(entry(), false) || !exitUsable(exit(), false)) return "a gate is not active";
+            int cost = GateCMD.computeFuelCost(exit());
             if (cost > Global.getSector().getPlayerFleet().getCargo().getFuel()) return "not enough fuel (" + cost + ")";
         }
-        if (BAJump.danger(exit)) return "hostile fleets near " + where(exit);
+        if (BAJump.danger(exit())) return "hostile fleets near " + where(exit());
         return null;
     }
 
@@ -312,14 +353,14 @@ public final class BAGates {
         String why = blocked();
         CampaignFleetAPI fleet = Global.getSector().getPlayerFleet();
         if (why != null) {
-            LOG.info("Auto-er Pilot: no transit at " + where(entry) + ": " + why + "; course for " + goal.getName() + " laid in");
+            LOG.info("Auto-er Pilot: no transit at " + where(entry()) + ": " + why + "; course for " + goal().getName() + " laid in");
             dialog.dismiss();
             Global.getSector().setPaused(false);
             stage = NONE;
             restoreGoal = true;
             return;
         }
-        SectorEntityToken from = entry, to = exit;
+        SectorEntityToken from = entry(), to = exit();
         String cost;
         if (bifrost) {
             dialog.dismiss();
@@ -361,33 +402,33 @@ public final class BAGates {
 
     /** The transit failed with an error: the course to the target is laid in again. */
     static void failed() {
-        if (goal == null) return;
+        if (goal() == null) return;
         stage = NONE;
         restoreGoal = true;
     }
 
     /** The fleet came out of the transit next to the exit gate. */
     private static boolean throughGate(CampaignFleetAPI fleet) {
-        return exit != null && fleet.getContainingLocation() == exit.getContainingLocation() && !fleet.isInHyperspaceTransition()
-                && Misc.getDistance(fleet, exit) < ARRIVAL_RANGE;
+        return exit() != null && fleet.getContainingLocation() == exit().getContainingLocation() && !fleet.isInHyperspaceTransition()
+                && Misc.getDistance(fleet, exit()) < ARRIVAL_RANGE;
     }
 
     /** Ends the route and lays in the course to its target. */
     private static void finish() {
-        SectorEntityToken g = goal;
+        SectorEntityToken g = goal();
         clear();
         layIn(g);
     }
 
     private static void layIn(SectorEntityToken target) {
         if (target == null || target.isExpired()) return;
-        planned = target;
+        setPlanned(target);
         Global.getSector().layInCourseFor(target);
     }
 
     private static void clear() {
         stage = NONE;
-        goal = entry = exit = null;
+        setGoal(null); setEntry(null); setExit(null);
         bifrost = false;
         waited = 0f;
         CampaignFleetAPI fleet = Global.getSector().getPlayerFleet();
@@ -442,14 +483,59 @@ public final class BAGates {
         return usable(g, bf) || (!bf && beacon(g));
     }
 
-    /** Bifrost gates that can be used now, with a Bifrost Control Center. */
+    /** Bifrost gates that can be used now, with a Bifrost Control Center: gates of active sections only, as AoTD offers. */
     static List<SectorEntityToken> bifrostGates() {
         if (!bifrostOpen()) return Collections.emptyList();
+        Set<SectorEntityToken> act = bifrostActive();
         List<SectorEntityToken> out = new ArrayList<SectorEntityToken>();
         for (SectorEntityToken g : Global.getSector().getCustomEntitiesWithTag(BIFROST_TAG)) {
-            if (usable(g, true)) out.add(g);
+            if (usable(g, true) && (act == null || act.contains(g))) out.add(g);
         }
         return out;
+    }
+
+    /** AoTD's Bifrost megastructure classes: BiFrostCMD's destination picker offers the gates of the active sections. */
+    static final String BF_MANAGER = "data.kaysaar.aotd.vok.campaign.econ.megastructures.impl.scripts.BifrostMegastructureManager",
+            BF_MEGA = "data.kaysaar.aotd.vok.campaign.econ.megastructures.impl.scripts.BifrostMegastructure",
+            BF_SECTION = "data.kaysaar.aotd.vok.campaign.econ.megastructures.impl.sections.bifrost.BifrostSection";
+    private static MethodHandle bfInstance, bfMega, bfActive, bfGate;
+    private static boolean bfResolved, bfNoted;
+
+    /**
+     * The gates of AoTD's active Bifrost sections (not restoring, not disabled), read through method handles. Null when
+     * AoTD's classes can not be read; the gate memory flags alone decide then.
+     */
+    static Set<SectorEntityToken> bifrostActive() {
+        try {
+            if (!bfResolved) {
+                bfResolved = true;
+                ClassLoader cl = Global.getSettings().getScriptClassLoader();
+                if (cl == null) cl = BAGates.class.getClassLoader();
+                Class<?> mgr = Class.forName(BF_MANAGER, false, cl), mega = Class.forName(BF_MEGA, false, cl),
+                        sec = Class.forName(BF_SECTION, false, cl);
+                MethodHandles.Lookup lk = MethodHandles.publicLookup();
+                bfInstance = lk.findStatic(mgr, "getInstance", MethodType.methodType(mgr));
+                bfMega = lk.findVirtual(mgr, "getMegastructure", MethodType.methodType(mega));
+                bfActive = lk.findVirtual(mega, "getActiveSections", MethodType.methodType(ArrayList.class));
+                bfGate = lk.findVirtual(sec, "getGateTiedTo", MethodType.methodType(SectorEntityToken.class));
+            }
+            if (bfGate == null) return null;
+            Object m = bfInstance.invoke();
+            Object mega = m == null ? null : bfMega.invoke(m);
+            Set<SectorEntityToken> out = new HashSet<SectorEntityToken>();
+            if (mega == null) return out;
+            Object list = bfActive.invoke(mega);
+            if (!(list instanceof List)) return out;
+            for (Object s : (List<?>) list) {
+                Object g = s == null ? null : bfGate.invoke(s);
+                if (g instanceof SectorEntityToken) out.add((SectorEntityToken) g);
+            }
+            return out;
+        } catch (Throwable t) {
+            bfGate = null;
+            if (!bfNoted) { bfNoted = true; LOG.warn("Auto-er Pilot: AoTD's Bifrost sections can not be read; the gates' own flags decide", t); }
+            return null;
+        }
     }
 
     /**

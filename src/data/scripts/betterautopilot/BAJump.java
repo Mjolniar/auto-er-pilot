@@ -10,6 +10,7 @@ import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.impl.campaign.JumpPointInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.ids.Factions;
 import com.fs.starfarer.api.impl.campaign.ids.MemFlags;
+import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.impl.campaign.tutorial.TutorialMissionIntel;
 import com.fs.starfarer.api.util.Misc;
 import org.apache.log4j.Logger;
@@ -17,8 +18,9 @@ import org.apache.log4j.Logger;
 /**
  * Jumps into and out of star systems without the jump point dialog. The dialog still opens when the game would show more
  * than the jump order: its hostile-fleet warning at the exit, the transponder question, too little fuel, a wormhole, an
- * unstable jump point, more than one exit, or the tutorial. The jump itself is the game's own (same fuel, course and
- * jump pay handling).
+ * unstable jump point, more than one exit, or the tutorial. Jump points with their own rules dialog (a market, an
+ * objective, a station or the has-interaction-dialog tag) keep it. The jump itself is the game's own (same fuel and course
+ * handling).
  */
 public final class BAJump {
     private BAJump() { }
@@ -62,6 +64,10 @@ public final class BAJump {
      */
     static boolean skipDialog(JumpPointAPI jp) {
         if (!BASettings.enabled || !BASettings.autoJump || jp == null) return false;
+        // the game's rules dialog (CoreCampaignPluginImpl) for a jump point with a market, objective, station or own dialog tag
+        if (jp.getMarket() != null || jp.hasTag(Tags.OBJECTIVE) || jp.hasTag(Tags.STATION) || jp.hasTag(Tags.HAS_INTERACTION_DIALOG)) return false;
+        // the game's one-click jump: its dialog orders the jump itself during init, so a second order would jump twice
+        if (oneClick()) return false;
         if (jp.getDestinations() == null || jp.getDestinations().size() != 1) return false;
         JumpDestination dest = jp.getDestinations().get(0);
         SectorEntityToken exit = dest == null ? null : dest.getDestination();
@@ -105,6 +111,12 @@ public final class BAJump {
             if (hostile) maxDanger = Math.max(maxDanger, Misc.getDangerLevel(other));
         }
         return maxDanger >= WARN_DANGER;
+    }
+
+    /** The game setting oneClickJumpPoints (false in vanilla, marked as not working). */
+    static boolean oneClick() {
+        try { return Global.getSettings().getBoolean("oneClickJumpPoints"); }
+        catch (Throwable t) { return false; }
     }
 
     /** The game's fuel cost for a jump out of a system: fuel per light year, rounded, at least 1 when above 0. */

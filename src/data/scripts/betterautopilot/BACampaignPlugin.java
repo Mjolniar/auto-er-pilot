@@ -8,7 +8,7 @@ import com.fs.starfarer.api.campaign.JumpPointAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
 
 /**
- * Picks the dialog for a jump point (hidden jump into a system, BAJump) and for the entry gate of a gate route (hidden
+ * Picks the dialog for a jump point (hidden jump into or out of a system, BAJump) and for the entry gate of a gate route (hidden
  * transit, BAGates). Returns null otherwise, so the game's own dialog opens. Transient: registered on every game load.
  */
 public class BACampaignPlugin extends BaseCampaignPlugin {

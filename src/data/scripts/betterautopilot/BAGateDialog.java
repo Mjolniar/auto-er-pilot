@@ -42,8 +42,16 @@ public class BAGateDialog implements InteractionDialogPlugin {
         Global.getSector().setPaused(false);
     }
 
+    /** Escape before the transit ran: the route ends and the course to its target is laid in again. */
     @Override
-    public void optionSelected(String optionText, Object optionData) { close(); }
+    public void optionSelected(String optionText, Object optionData) {
+        if (pending) {
+            pending = false;
+            BAGates.LOG.info("Auto-er Pilot: gate transit dialog closed before the transit; course to the target laid in again");
+            BAGates.failed();
+        }
+        close();
+    }
 
     @Override
     public void optionMousedOver(String optionText, Object optionData) { }

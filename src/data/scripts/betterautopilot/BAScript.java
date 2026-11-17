@@ -24,11 +24,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Steers the player fleet while it flies itself to an entity: a laid-in course point, or a planet, station, jump point or
- * fleet the player clicked (the game shows "Laying in a course for" for both). Plans every 0.15 seconds, applies every
- * frame: a move destination override (one frame each, so the game's own steering takes over the moment this stops) and
- * the game's go-slow for storms. The target is never changed; the course only at a hazardous target and for a gate route
- * (BAGates). A click on empty space is manual flying.
+ * Steers the player fleet while it flies itself to a travel target (travelTarget): from a laid-in course or a click. Plans
+ * every 0.15 seconds, applies every frame: a move destination override (one frame each, so the game's own steering takes
+ * over the moment this stops) and the game's go-slow for storms. The target changes only at a hazardous target (the
+ * course ends outside it); the course also for a gate route (BAGates). A click on empty space is manual flying.
  * Also switches Reverse Polarity for slipstreams and turns Sustained Burn back on (BAAbilities).
  */
 public class BAScript implements EveryFrameScript {
@@ -92,6 +91,8 @@ public class BAScript implements EveryFrameScript {
     /** The last target checked by travelTarget, and the answer. */
     private SectorEntityToken checkedStep;
     private boolean checkedTravel;
+    /** Where the trip ends, from the last plan: the target, or the stop point outside a hazard that holds it. */
+    private float goalX, goalY;
 
     @Override
     public boolean isDone() { return false; }
@@ -201,8 +202,8 @@ public class BAScript implements EveryFrameScript {
             }
         }
         apply(fleet);
-        Vector2f fp = fleet.getLocation(), sp = step.getLocation();
-        abilities.keepSustainedBurn(fleet, BAGeom.dist(fp.x, fp.y, sp.x, sp.y),
+        Vector2f fp = fleet.getLocation();
+        abilities.keepSustainedBurn(fleet, BAGeom.dist(fp.x, fp.y, goalX, goalY),
                 slow || slipBusy || fleetNear || slipExitLeft > 0f || (fleet.isInHyperspace() && Misc.isInsideSlipstream(fleet)),
                 rideSB, amount);
         if (BASettings.debug) {
@@ -248,7 +249,7 @@ public class BAScript implements EveryFrameScript {
     static boolean travelTarget(SectorEntityToken e) {
         if (e instanceof PlanetAPI || e instanceof JumpPointAPI) return true;
         if (pointToken(e)) return true;
-        if (e.hasTag(Tags.GATE) || BAGates.beacon(e)) return true;
+        if (e.hasTag(Tags.GATE) || BAGates.beacon(e) || bifrostGate(e)) return true;
         for (StarSystemAPI sys : Global.getSector().getStarSystems()) {
             if (sys.getHyperspaceAnchor() == e) return true;
         }
@@ -267,8 +268,13 @@ public class BAScript implements EveryFrameScript {
      */
     static boolean hazardousTarget(SectorEntityToken e) {
         if (e instanceof PlanetAPI) return ((PlanetAPI) e).isStar() || ((PlanetAPI) e).isBlackHole();
-        if (e instanceof JumpPointAPI || e.hasTag(Tags.GATE) || BAGates.beacon(e)) return false;
+        if (e instanceof JumpPointAPI || e.hasTag(Tags.GATE) || BAGates.beacon(e) || bifrostGate(e)) return false;
         return true;
+    }
+
+    /** An AoTD Bifrost gate (it has no "gate" tag). */
+    static boolean bifrostGate(SectorEntityToken e) {
+        return e != null && BAGates.BIFROST_TYPE.equals(e.getCustomEntityType());
     }
 
     /**
@@ -293,6 +299,11 @@ public class BAScript implements EveryFrameScript {
         planIn = 0f;
         wasInSlip = false;
         slipExitLeft = 0f;
+        // plans made before the player took over (a crossing line-up point, a stream to enter, a detour side) start over
+        cross.reset();
+        entering = null;
+        stickyKey = null;
+        stickySide = 0;
         note(why);
     }
 
@@ -310,6 +321,8 @@ public class BAScript implements EveryFrameScript {
         LocationAPI loc = fleet.getContainingLocation();
         Vector2f p = fleet.getLocation(), t = step.getLocation(), v = fleet.getVelocity();
         float px = p.x, py = p.y, tx = t.x, ty = t.y;
+        goalX = tx;
+        goalY = ty;
         boolean hyper = loc.isHyperspace();
         float vf = Math.max(10f, fleet.getTravelSpeed());
         float accel = Math.max(1f, fleet.getAcceleration());
@@ -334,12 +347,13 @@ public class BAScript implements EveryFrameScript {
         slipBusy = false;
         if (wasInSlip && in == null && BASettings.slipExit) slipExitLeft = EXIT_WINDOW;
         wasInSlip = in != null;
-        if (in == null) {
-            leftStream = null;
-            paidSwitches = 0;
-        }
+        // the game charges for Reverse Polarity switches anywhere inside a stream, also at its faint edges (in is null there)
+        boolean inStream = hyper && Misc.isInsideSlipstream(fleet);
+        if (in == null) leftStream = null;
+        if (!inStream) paidSwitches = 0;
 
-        HyperspaceTerrainPlugin h = hyper && in == null ? BAStorms.plugin(loc) : null;
+        // no storms inside a slipstream (the game keeps them off there, and go-slow would cut the stream's push)
+        HyperspaceTerrainPlugin h = hyper && in == null && !inStream ? BAStorms.plugin(loc) : null;
 
         // storms: slow down inside or ahead of storming and signaling cells (in slipstreams the game keeps storms off)
         if (h != null && BASettings.storms) {
@@ -368,9 +382,13 @@ public class BAScript implements EveryFrameScript {
             if (d > 1f) { ux = (px - hold.x) / d; uy = (py - hold.y) / d; }
             else { ux = 1f; uy = 0f; }
             float sx = hold.x + ux * hold.r, sy = hold.y + uy * hold.r;
+            goalX = sx;
+            goalY = sy;
             if (BAGeom.dist(px, py, sx, sy) < 150f + fleet.getRadius() * 0.5f && speed < 40f) {
                 endCourse(fleet, step);
                 fleet.setInteractionTarget(null);
+                // the override lasts one frame; the move destination keeps the fleet at the stop point after it
+                fleet.setMoveDestination(sx, sy);
                 fleet.setMoveDestinationOverride(sx, sy);
                 override = false;
                 LOG.info("Auto-er Pilot: course ended outside " + BAObstacles.name(hold) + "; the target " + step.getName()
@@ -488,7 +506,7 @@ public class BAScript implements EveryFrameScript {
                 dx = (tx - px) / l;
                 dy = (ty - py) / l;
             }
-            float look = Math.max(1200f, speed * 2.5f) + fleet.getRadius();
+            float look = Math.min(BAObstacles.MAX_LOOK, Math.max(1200f, speed * 2.5f) + fleet.getRadius());
             float[] cr = BASlip.crossing(streams, px, py, dx, dy, look, fleet.getRadius());
             if (cr != null) {
                 float ang = BAGeom.angleBetween(cr[0], cr[1], tx - px, ty - py);

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.17
+- Reverse Polarity: Fixed Reverse Polarity turned on by the mod never being turned off inside a slipstream.
+- Reverse Polarity: The limit of 2 paid switches per slipstream also counts switches at the stream's faint edges.
+- Storms: No storm slow-down or detour inside a slipstream, also with every slipstream setting off.
+- Slipstreams: Fixed a fleet without Reverse Polarity entering a wrong-way slipstream when the target lies past a bend of the stream.
+- Slipstreams: "Slipstream least saving" is at least 5 percent.
+- Sustained Burn: With a star or black hole as the target, the trip length counts to the stop point outside it.
+- Sustained Burn: With "Use Sustained Burn" off, Sustained Burn turned off for a slipstream is not turned back on for the next target.
+- Steering: Slipstream crossings, stream entries and detour sides are planned again after the player steers by hand.
+- Hazards: The fleet stays at the stop point outside a corona after the course ends there.
+- Terrain: A modded terrain that throws errors is skipped. Steering goes on in that location.
+- Jump points: Jump points with their own dialog (a market, an objective, a station or the interaction dialog tag) keep it.
+- Jump points: The dialog is shown when the game offers no jump in it.
+- Jump points: The dialog is kept while the game setting oneClickJumpPoints is on.
+- Gates: A dialog at the entry gate that closes without the transit ends the route. The course to the target is laid in.
+- Gates: A route taken up from a save without a course lays in the course to its target.
+- Gates: Fixed a new course waiting 5 seconds before gate planning after a course was cleared during a transit.
+- Bifrost: Gate routes use only gates of active Bifrost sections, as AoTD's destination list does.
+- Bifrost: The way to a Bifrost entry gate is steered.
+- Memory: The mod no longer holds the last save's sector after quitting to the menu or while another save loads.
+- Docs: Removed "crew jump pay". A jump costs fuel only.
+
 ## 0.1.16
 - Gates: Gate routes can end at a gate beacon, such as a Random Assortment of Things settlement with a Gate Beacon. A beacon is an exit only, as in the gate dialog.
 - Targets: A course to a gate beacon is steered, as a course to a gate is.

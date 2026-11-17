@@ -15,7 +15,9 @@ import com.fs.starfarer.api.impl.campaign.terrain.PulsarBeamTerrainPlugin;
 import com.fs.starfarer.api.impl.campaign.velfield.SlipstreamTerrainPlugin2;
 import org.lwjgl.util.vector.Vector2f;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /** Hazard terrain, stars and hostile fleets as circles to steer around; asteroid belts and fields to slow down in. */
 final class BAObstacles {
@@ -35,6 +37,7 @@ final class BAObstacles {
         Vector2f t = step.getLocation();
         Vector2f q = new Vector2f();
         for (CampaignTerrainAPI terrain : loc.getTerrainCopy()) {
+          try {
             CampaignTerrainPlugin p = terrain.getPlugin();
             // pulsar beams: two turning arcs, as wide as the whole beam length (well over 10000 units), never a disc
             if (p == null || p instanceof HyperspaceTerrainPlugin || p instanceof SlipstreamTerrainPlugin2
@@ -49,6 +52,7 @@ final class BAObstacles {
             float rr = r + margin + (careful ? 200f : 0f);
             if (BAGeom.dist(t.x, t.y, c.x, c.y) <= rr + step.getRadius()) continue;
             out.add(new BAGeom.Circle(c.x, c.y, rr, terrain, "hazard"));
+          } catch (Throwable e) { bad(terrain, e); }
         }
         for (PlanetAPI pl : loc.getPlanets()) {
             if (!pl.isStar() || pl == step) continue;
@@ -136,6 +140,7 @@ final class BAObstacles {
         Vector2f q = new Vector2f();
         BAGeom.Circle best = null;
         for (CampaignTerrainAPI terrain : loc.getTerrainCopy()) {
+          try {
             CampaignTerrainPlugin p = terrain.getPlugin();
             if (p == null || p instanceof HyperspaceTerrainPlugin || p instanceof SlipstreamTerrainPlugin2
                     || p instanceof PulsarBeamTerrainPlugin) continue;
@@ -147,6 +152,7 @@ final class BAObstacles {
             float rr = r + margin + (careful ? 200f : 0f);
             if (BAGeom.dist(t.x, t.y, c.x, c.y) > rr) continue;
             if (best == null || rr > best.r) best = new BAGeom.Circle(c.x, c.y, rr, terrain, "hazard");
+          } catch (Throwable e) { bad(terrain, e); }
         }
         for (PlanetAPI pl : loc.getPlanets()) {
             if (!pl.isStar() && !pl.isBlackHole()) continue;
@@ -173,14 +179,27 @@ final class BAObstacles {
         float r = fleet.getRadius();
         look = Math.min(look, MAX_LOOK);
         for (CampaignTerrainAPI terrain : loc.getTerrainCopy()) {
+          try {
             CampaignTerrainPlugin p = terrain.getPlugin();
             if (!slowTerrain(p)) continue;
             for (float d = 0f; d <= look; d += 100f) {
                 q.set(px + dx * d, py + dy * d);
                 if (p.containsPoint(q, r)) return true;
             }
+          } catch (Throwable e) { bad(terrain, e); }
         }
         return false;
+    }
+
+    /** Terrain types already logged as throwing. Strings only: nothing of a save is kept. */
+    private static final Set<String> badLogged = new HashSet<String>();
+
+    /** A terrain (another mod's) that throws is skipped, logged once per type, so it does not stop all steering there. */
+    static void bad(CampaignTerrainAPI terrain, Throwable e) {
+        String k;
+        try { k = terrain == null || terrain.getPlugin() == null ? "?" : terrain.getPlugin().getClass().getName(); }
+        catch (Throwable t) { k = "?"; }
+        if (badLogged.add(k)) BAScript.LOG.warn("Auto-er Pilot: terrain " + k + " skipped: it throws", e);
     }
 
     /** Name for the debug log. */

@@ -57,7 +57,8 @@ public final class BASettings {
         slipExit = bool("ba_slipExit", true);
         slipUse = bool("ba_slipUse", true);
         slipAngle = clamp(integer("ba_slipAngle", 45), 5, 90);
-        slipSaving = clamp(integer("ba_slipSaving", 10), 0, 90);
+        // at least 5: below that a ride that saves almost nothing is entered and left again in turn
+        slipSaving = clamp(integer("ba_slipSaving", 10), 5, 90);
         slipReverse = bool("ba_slipReverse", true);
         slipReverseInside = bool("ba_slipReverseInside", true);
         slipAvoid = bool("ba_slipAvoid", true);

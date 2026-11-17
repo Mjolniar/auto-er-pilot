@@ -107,8 +107,11 @@ final class BAAbilities {
         }
     }
 
-    /** A new target: a turn-off by the player applies to one target only. */
-    void newTarget() { sbPlayerOff = false; }
+    /**
+     * A new target: a turn-off by the player applies to one target only, and Sustained Burn turned off for a slipstream of
+     * the last target is not turned back on for this one with the setting off.
+     */
+    void newTarget() { sbPlayerOff = false; sbRestore = false; }
 
     /**
      * The id of an active or winding-up ability with the slow-down tag, or null. Any other such ability comes before Go
@@ -129,7 +132,8 @@ final class BAAbilities {
      * active or winding up (Go Dark, Emergency Burn and others the game does not allow with it), the player did not turn it off
      * during this target, and the straight trip is longer than SB_MIN_DISTANCE and takes more than twice its spin-up time
      * plus SB_MIN_SECONDS. quiet: the steering is slowing down, in or near a slipstream, correcting drift after one, or
-     * going around a fleet (turning it on stops the fleet).
+     * a stronger hostile fleet is close by (turning it on stops the fleet). distance: to the target, or to the stop point
+     * outside a hazard that holds the target.
      * riding: the fleet rides a slipstream with its flow. The game then keeps the fleet's speed when Sustained Burn starts
      * (memory SB_NO_STOP and SB_NO_SLOW, set by the stream each frame), so quiet does not apply and the spin-up costs no
      * time; the trip must take more than SB_MIN_SECONDS at the current speed.
@@ -184,9 +188,9 @@ final class BAAbilities {
 
     /** True when another active or winding-up ability on the fleet does not go with ability a (the game's own rule). */
     static boolean otherActive(CampaignFleetAPI fleet, AbilityPlugin a) {
-        if (a == null) return false;
+        if (a == null || a.getSpec() == null) return false;
         for (AbilityPlugin o : fleet.getAbilities().values()) {
-            if (o == a || !o.isActiveOrInProgress()) continue;
+            if (o == null || o == a || o.getSpec() == null || !o.isActiveOrInProgress()) continue;
             if (!compatible(a.getSpec(), o.getSpec())) return true;
         }
         return false;
@@ -212,7 +216,8 @@ final class BAAbilities {
      * deployment cost x 0.25) and ships below that may be damaged; outside it costs nothing. Also needs the fuel.
      */
     static boolean safeToSwitch(CampaignFleetAPI fleet, AbilityPlugin rp) {
-        if (rp == null || !rp.isUsable() || rp.isInProgress()) return false;
+        // a toggle's progress is its level (1 while on), so only a level between 0 and 1 means it is switching now
+        if (rp == null || !rp.isUsable() || BAGeom.midSwitch(rp.getProgressFraction())) return false;
         if (!Misc.isInsideSlipstream(fleet)) return true;
         if (!(rp instanceof ToggleAbilityWithCost)) return true;
         ToggleAbilityWithCost t = (ToggleAbilityWithCost) rp;

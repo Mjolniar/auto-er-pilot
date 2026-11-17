@@ -31,6 +31,8 @@ public class BAJumpDialog extends JumpPointInteractionDialogPluginImpl {
         Object jump = BAJump.jumpOption();
         try {
             if (jump == null) { show("option not found"); return; }
+            // the game offers no jump (fuel changed since the pick, or another mod changed the dialog): shown as it is
+            if (!dlg.getOptionPanel().hasOption(jump)) { show("the game offers no jump here"); return; }
             String name = dlg.getInteractionTarget() == null ? "?" : dlg.getInteractionTarget().getName();
             optionSelected(null, jump);
             Object confirm = BAJump.confirmOption();

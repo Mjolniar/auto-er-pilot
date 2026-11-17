@@ -5,7 +5,8 @@ import com.fs.starfarer.api.Global;
 
 /**
  * Reads the settings at startup and again on every save load (LunaLib has loaded its settings by then), and adds the
- * steering script and the dialog plugin (jumps and gates) on every load. Both are transient: nothing goes into the save.
+ * steering script and the dialog plugin (jumps and gates) on every load. Both are transient. The save holds only plain
+ * player fleet memory: a gate route under way (BAGates) and the Reverse Polarity flag (BAAbilities).
  */
 public class BAModPlugin extends BaseModPlugin {
     @Override

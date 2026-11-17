@@ -324,6 +324,11 @@ public final class BAGeom {
         return bestA < 0 ? null : new int[] {bestA, bestB};
     }
 
+    /** A toggle ability switching on or off now: its level is between 0 and 1 (0 is off, 1 is on). */
+    public static boolean midSwitch(float level) {
+        return level > 0f && level < 1f;
+    }
+
     /** True when the gate route is at least minSaving (0 to 1) and minGain units shorter than the direct way. */
     public static boolean gateWorth(float direct, float via, float minSaving, float minGain) {
         if (via == Float.MAX_VALUE) return false;

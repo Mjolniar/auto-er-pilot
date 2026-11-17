@@ -69,7 +69,9 @@ final class BACross {
         float n0x = -f[1], n0y = f[0];
         float sP = (px - c.x) * n0x + (py - c.y) * n0y, sT = (tx - c.x) * n0x + (ty - c.y) * n0y;
         float halfW = hit.s.getWidth(hit.along) / 2f;
-        if (Math.abs(sT) < halfW) return null;   // the target is in the stream here: it has to be entered
+        // the target is in the stream: it has to be entered. Near the tangent line but outside the stream (the stream
+        // curves away) is not, so the side tests below decide.
+        if (Math.abs(sT) < halfW && hit.s.containsPoint(new Vector2f(tx, ty), 0f)) return null;
 
         float margin = fleet.getRadius() + 300f;
         if (Math.signum(sP) == Math.signum(sT)) {
