@@ -1,0 +1,27 @@
+# Auto-er Pilot settings, used when LunaLib is not enabled. With LunaLib, change them in its settings menu.
+# Read at startup and on every save load. Same ids as the LunaLib rows (data/config/LunaSettings.csv).
+{
+  "ba_enabled": true,
+  "ba_storms": true,
+  "ba_stormDetour": true,
+  "ba_stormDetourShare": 15,
+  "ba_slipExit": true,
+  "ba_slipUse": true,
+  "ba_slipAngle": 45,
+  "ba_slipSaving": 10,
+  "ba_slipReverse": true,
+  "ba_slipReverseInside": true,
+  "ba_slipAvoid": true,
+  "ba_keepSB": true,
+  "ba_hazards": true,
+  "ba_hazardMargin": 300,
+  "ba_fleets": true,
+  "ba_fleetMargin": 1.0,
+  "ba_fleetClearance": 800,
+  "ba_asteroidsSlow": true,
+  "ba_autoJump": true,
+  "ba_gates": true,
+  "ba_bifrost": true,
+  "ba_gateSaving": 10,
+  "ba_debug": false
+}
