@@ -15,7 +15,7 @@ When your fleet flies itself somewhere (a laid-in course, or a click on a planet
 - Hostile fleets: It goes around hostile fleets that are stronger than you and can see you, and it flies past weaker ones.
 - Asteroids: It slows down in asteroid belts and fields so you don't take hits. There's no detour, since you usually can't avoid them anyway.
 - Jump points: It jumps without the dialog. The dialog still shows for hostiles at the exit, transponder questions, low fuel, wormholes and unstable jump points. Fuel costs the same.
-- Gates: Once you have the Janus Device and At the Gates done, a course goes through two gates when that's at least 10 percent and one light year shorter. It jumps through without the dialog at the normal fuel cost and sets your course again on the other side. Lay in the same course again to fly direct.
+- Gates: Once you have the Janus Device and At the Gates done, a course goes through two gates when that's at least 10 percent and one light year shorter. It jumps through without the dialog at the normal fuel cost and sets your course again on the other side. Lay in the same course again to fly direct. Gates in a system with a pulsar are skipped, so you don't come out in the beam (you can turn that off).
 - Gate beacons: A Random Assortment of Things settlement with a Gate Beacon can be the exit of a gate route.
 - Bifrost: With AoTD Vaults of Knowledge and a Bifrost Control Center, gate routes use Bifrost gates too (no fuel, same 30-day cooldown).
 - Taking control back: Holding a mouse button or the go-slow key gives you control back, and so do dialogs, battles and jumps.

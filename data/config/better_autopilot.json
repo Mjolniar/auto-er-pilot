@@ -24,6 +24,7 @@
   "ba_autoJump": true,
   "ba_gates": true,
   "ba_bifrost": true,
+  "ba_gatesNoPulsar": true,
   "ba_gateSaving": 10,
   "ba_debug": false
 }

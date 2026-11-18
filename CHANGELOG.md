@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.21
+- Gates: Gate routes skip gates, gate beacons and Bifrost gates in star systems with a pulsar beam.
+- Gates: A route under way does not transit when its entry or exit gate is in a pulsar system. The course to the target is laid in again.
+- Settings: Added "Skip gates in pulsar systems" (on by default).
+
 ## 0.1.20
 - Coronas and pulsar beams: Added normal burn when a corona, event horizon or pulsar beam holds the fleet for 4 seconds. Sustained Burn is turned off and stays off inside.
 - Coronas and pulsar beams: Sustained Burn is turned off at once inside one within 2000 units of the target.

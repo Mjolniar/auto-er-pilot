@@ -2,6 +2,7 @@ package data.scripts.betterautopilot;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+import com.fs.starfarer.api.campaign.CampaignTerrainAPI;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.InteractionDialogPlugin;
@@ -16,6 +17,7 @@ import com.fs.starfarer.api.characters.AbilityPlugin;
 import com.fs.starfarer.api.impl.campaign.GateEntityPlugin;
 import com.fs.starfarer.api.impl.campaign.JumpPointInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.rulecmd.missions.GateCMD;
+import com.fs.starfarer.api.impl.campaign.terrain.PulsarBeamTerrainPlugin;
 import com.fs.starfarer.api.util.Misc;
 import org.apache.log4j.Logger;
 import org.lwjgl.util.vector.Vector2f;
@@ -344,6 +346,7 @@ public final class BAGates {
             int cost = GateCMD.computeFuelCost(exit());
             if (cost > Global.getSector().getPlayerFleet().getCargo().getFuel()) return "not enough fuel (" + cost + ")";
         }
+        if (skipPulsar(entry()) || skipPulsar(exit())) return "a gate is in a pulsar system";
         if (BAJump.danger(exit())) return "hostile fleets near " + where(exit());
         return null;
     }
@@ -458,11 +461,25 @@ public final class BAGates {
     }
 
     /** Scanned, active gates of the game and gate beacons, once the game lets the player use gates. */
+    /**
+     * With the setting on, gates (game gates, gate beacons, Bifrost gates) in a star system with a pulsar beam are not used
+     * for gate routes: the fleet can come out in the middle of the beam.
+     */
+    static boolean skipPulsar(SectorEntityToken g) {
+        if (!BASettings.gatesNoPulsar || g == null) return false;
+        LocationAPI loc = g.getContainingLocation();
+        if (loc == null || loc.isHyperspace()) return false;
+        for (CampaignTerrainAPI t : loc.getTerrainCopy()) {
+            if (t.getPlugin() instanceof PulsarBeamTerrainPlugin) return true;
+        }
+        return false;
+    }
+
     static List<SectorEntityToken> gameGates() {
         if (!gameGatesOpen()) return Collections.emptyList();
         List<SectorEntityToken> out = new ArrayList<SectorEntityToken>();
         for (SectorEntityToken g : GateEntityPlugin.getGateData().scanned) {
-            if (usable(g, false) || beacon(g)) out.add(g);
+            if ((usable(g, false) || beacon(g)) && !skipPulsar(g)) out.add(g);
         }
         return out;
     }
@@ -489,7 +506,7 @@ public final class BAGates {
         Set<SectorEntityToken> act = bifrostActive();
         List<SectorEntityToken> out = new ArrayList<SectorEntityToken>();
         for (SectorEntityToken g : Global.getSector().getCustomEntitiesWithTag(BIFROST_TAG)) {
-            if (usable(g, true) && (act == null || act.contains(g))) out.add(g);
+            if (usable(g, true) && (act == null || act.contains(g)) && !skipPulsar(g)) out.add(g);
         }
         return out;
     }
