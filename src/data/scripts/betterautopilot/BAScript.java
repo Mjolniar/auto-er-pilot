@@ -60,7 +60,7 @@ public class BAScript implements EveryFrameScript {
     /** Debug: write the obstacle list once for each new target. */
     private boolean listObstacles;
     private final BAAbilities abilities = new BAAbilities();
-    /** Transverse Jump out of a pulsar beam that holds the fleet. */
+    /** Out of a corona, event horizon or pulsar beam that holds the fleet: normal burn, Emergency Burn, Transverse Jump. */
     private final BAEscape escape = new BAEscape();
     /** Crossing a slipstream that does not flow toward the target, without a usable Reverse Polarity. */
     private final BACross cross = new BACross();
@@ -138,7 +138,7 @@ public class BAScript implements EveryFrameScript {
         }
         if (!BASettings.enabled) {
             // an escape jump under way is still followed to its end (its course check)
-            if (!sector.isPaused() && escape.busy()) escape.check(fleet, ui, null, amount);
+            if (!sector.isPaused() && escape.busy()) escape.check(fleet, ui, null, amount, abilities);
             // turned off in the settings: Reverse Polarity turned on here goes off where that is free (outside a stream)
             abilities.track(fleet);   // also clears the memory flag when Reverse Polarity is already off
             if (abilities.rpMine && !sector.isPaused() && !Misc.isInsideSlipstream(fleet)) {
@@ -150,7 +150,7 @@ public class BAScript implements EveryFrameScript {
         abilities.track(fleet);
         if (sector.isPaused()) return;
         // a Transverse Jump out of a pulsar beam under way: followed before the hand-off checks (the jump slows the fleet)
-        if (escape.busy() && escape.check(fleet, ui, null, amount)) { idle("not steering: Transverse Jump out of a pulsar beam"); return; }
+        if (escape.busy() && escape.check(fleet, ui, null, amount, abilities)) { idle("not steering: Transverse Jump out of a pulsar beam"); return; }
         if (rpHold > 0f) rpHold -= amount;
         if (slowHold > 0f) slowHold -= amount;
         if (slowSentAgo < 99f) slowSentAgo += amount;
@@ -165,8 +165,8 @@ public class BAScript implements EveryFrameScript {
             darkSlow = true;
         }
         SectorEntityToken step = following(ui, fleet, idleWhy);
-        // held in a pulsar beam with no progress to the target: Transverse Jump (any target the fleet flies itself to)
-        if (escape.check(fleet, ui, step, amount)) { idle("not steering: Transverse Jump out of a pulsar beam"); return; }
+        // held in a corona, event horizon or pulsar beam with no progress: normal burn, Emergency Burn, Transverse Jump (BAEscape)
+        if (escape.check(fleet, ui, step, amount, abilities)) { idle("not steering: Transverse Jump out of a pulsar beam"); return; }
         if (step != null && step != checkedStep) {
             checkedStep = step;
             checkedTravel = travelTarget(step);
@@ -212,7 +212,7 @@ public class BAScript implements EveryFrameScript {
         apply(fleet);
         Vector2f fp = fleet.getLocation();
         abilities.keepSustainedBurn(fleet, BAGeom.dist(fp.x, fp.y, goalX, goalY),
-                slow || slipBusy || fleetNear || slipExitLeft > 0f || (fleet.isInHyperspace() && Misc.isInsideSlipstream(fleet)),
+                slow || slipBusy || fleetNear || slipExitLeft > 0f || escape.inWind() || (fleet.isInHyperspace() && Misc.isInsideSlipstream(fleet)),
                 rideSB, amount);
         if (BASettings.debug) {
             statusIn -= amount;

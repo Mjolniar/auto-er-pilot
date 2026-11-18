@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.20
+- Coronas and pulsar beams: Added normal burn when a corona, event horizon or pulsar beam holds the fleet for 4 seconds. Sustained Burn is turned off and stays off inside.
+- Coronas and pulsar beams: Sustained Burn is turned off at once inside one within 2000 units of the target.
+- Coronas and pulsar beams: Added Emergency Burn when the fleet is still held. Only when every ship has the CR it costs.
+- Pulsar beams: Transverse Jump comes after normal burn and Emergency Burn.
+- Settings: Added "Burn out of coronas and pulsar beams" (on by default).
+
 ## 0.1.19
 - Pulsar beams: Added Transverse Jump out of a pulsar beam when the fleet flies itself and makes no progress toward the target for 6 seconds. Same fuel and CR cost as a manual jump.
 - Pulsar beams: When the target is in the same system, the course is cleared once the fleet is in hyperspace.

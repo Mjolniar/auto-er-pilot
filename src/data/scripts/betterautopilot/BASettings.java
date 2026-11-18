@@ -27,7 +27,7 @@ public final class BASettings {
     public static float fleetMargin = 1f;
     public static int fleetClearance = 800;
     public static boolean asteroidsSlow = true;
-    public static boolean pulsarEscape = true;
+    public static boolean pulsarEscape = true, windBurn = true;
     public static boolean autoJump = true, gates = true, bifrost = true;
     public static int gateSaving = 10;
     public static boolean debug = false;
@@ -71,6 +71,7 @@ public final class BASettings {
         fleetClearance = clamp(integer("ba_fleetClearance", 800), 0, 5000);
         asteroidsSlow = bool("ba_asteroidsSlow", true);
         pulsarEscape = bool("ba_pulsarEscape", true);
+        windBurn = bool("ba_windBurn", true);
         autoJump = bool("ba_autoJump", true);
         gates = bool("ba_gates", true);
         bifrost = bool("ba_bifrost", true);
@@ -82,7 +83,7 @@ public final class BASettings {
                 + ", keep sustained burn " + keepSB
                 + ", hazards " + hazards + " (" + hazardMargin + ")"
                 + ", fleets " + fleets + " (x" + fleetMargin + ", " + fleetClearance + ")"
-                + ", asteroids " + asteroidsSlow + ", pulsar escape " + pulsarEscape + ", jump without dialog " + autoJump
+                + ", asteroids " + asteroidsSlow + ", wind burn " + windBurn + ", pulsar escape " + pulsarEscape + ", jump without dialog " + autoJump
                 + ", gates " + gates + " (" + gateSaving + " percent, Bifrost " + bifrost + "), debug " + debug);
         return true;
     }

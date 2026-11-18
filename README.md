@@ -11,7 +11,7 @@ When your fleet flies itself somewhere (a laid-in course, or a click on a planet
 - Without Reverse Polarity: It stays out of wrong-way streams, or it crosses them at a gap or the weakest spot.
 - Sustained Burn: It turns it on for long trips and while riding a stream, unless a stronger hostile fleet is close. If you turn it off, it stays off until your next target.
 - Hazards: It goes around coronas, black holes and stars. If a star or black hole is the target, it stops outside the corona and ends the course there.
-- Pulsar beams: If a pulsar beam holds the fleet for 6 seconds, it uses Transverse Jump to get out into hyperspace (same cost as doing it yourself). If the target was in that system, the course is cleared.
+- Coronas and pulsar beams: If a corona, a black hole or a pulsar beam holds the fleet back for 4 seconds, it turns Sustained Burn off for full acceleration, and then it uses Emergency Burn if every ship has the CR for it. Close to the target, Sustained Burn goes off right away. If a pulsar beam still holds the fleet, it uses Transverse Jump to get out into hyperspace (same cost as doing it yourself), and if the target was in that system, the course is cleared.
 - Hostile fleets: It goes around hostile fleets that are stronger than you and can see you, and it flies past weaker ones.
 - Asteroids: It slows down in asteroid belts and fields so you don't take hits. There's no detour, since you usually can't avoid them anyway.
 - Jump points: It jumps without the dialog. The dialog still shows for hostiles at the exit, transponder questions, low fuel, wormholes and unstable jump points. Fuel costs the same.
