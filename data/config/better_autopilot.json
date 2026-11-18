@@ -19,6 +19,7 @@
   "ba_fleetMargin": 1.0,
   "ba_fleetClearance": 800,
   "ba_asteroidsSlow": true,
+  "ba_pulsarEscape": true,
   "ba_autoJump": true,
   "ba_gates": true,
   "ba_bifrost": true,

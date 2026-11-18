@@ -324,6 +324,29 @@ public final class BAGeom {
         return bestA < 0 ? null : new int[] {bestA, bestB};
     }
 
+    /**
+     * Progress toward a target while something pushes the fleet: stuck once the distance has not dropped by at least
+     * progress units for seconds in a row.
+     */
+    public static final class Stuck {
+        final float progress, seconds;
+        private float best = Float.MAX_VALUE, since;
+
+        public Stuck(float progress, float seconds) { this.progress = progress; this.seconds = seconds; }
+
+        /** dist: the distance to the target now; dt: seconds since the last call. True once stuck. */
+        public boolean update(float dist, float dt) {
+            if (Float.isNaN(dist)) return false;
+            if (dist < best - progress || best == Float.MAX_VALUE) { best = dist; since = 0f; }
+            else since += Math.max(0f, dt);
+            return since >= seconds;
+        }
+
+        public float since() { return since; }
+
+        public void reset() { best = Float.MAX_VALUE; since = 0f; }
+    }
+
     /** A toggle ability switching on or off now: its level is between 0 and 1 (0 is off, 1 is on). */
     public static boolean midSwitch(float level) {
         return level > 0f && level < 1f;

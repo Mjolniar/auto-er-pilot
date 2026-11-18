@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.19
+- Pulsar beams: Added Transverse Jump out of a pulsar beam when the fleet flies itself and makes no progress toward the target for 6 seconds. Same fuel and CR cost as a manual jump.
+- Pulsar beams: When the target is in the same system, the course is cleared once the fleet is in hyperspace.
+- Settings: Added "Transverse Jump out of pulsar beams" (on by default).
+
 ## 0.1.18
 - Settings: Rewrote the 23 LunaLib setting descriptions in the author's wording. Same facts, numbers and setting names.
 - Mod info: Rewrote the launcher description in the author's wording.
