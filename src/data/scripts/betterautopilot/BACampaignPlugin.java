@@ -24,12 +24,13 @@ public class BACampaignPlugin extends BaseCampaignPlugin {
     @Override
     public PluginPick<InteractionDialogPlugin> pickInteractionDialogPlugin(SectorEntityToken target) {
         try {
+            // the entry of a route under way first (a wormhole terminus is a jump point)
+            InteractionDialogPlugin gate = BAGates.pickDialog(target);
+            if (gate != null) return new PluginPick<InteractionDialogPlugin>(gate, CampaignPlugin.PickPriority.MOD_GENERAL);
             if (target instanceof JumpPointAPI) {
                 if (!BAJump.skipDialog((JumpPointAPI) target)) return null;
                 return new PluginPick<InteractionDialogPlugin>(new BAJumpDialog(), CampaignPlugin.PickPriority.MOD_GENERAL);
             }
-            InteractionDialogPlugin gate = BAGates.pickDialog(target);
-            if (gate != null) return new PluginPick<InteractionDialogPlugin>(gate, CampaignPlugin.PickPriority.MOD_GENERAL);
         } catch (Throwable t) {
             String msg = String.valueOf(t);
             if (!msg.equals(lastError)) { lastError = msg; BAJump.LOG.warn("Auto-er Pilot: dialog pick failed; the game's dialog opens", t); }

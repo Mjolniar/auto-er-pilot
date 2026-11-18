@@ -28,7 +28,7 @@ public final class BASettings {
     public static int fleetClearance = 800;
     public static boolean asteroidsSlow = true;
     public static boolean pulsarEscape = true, windBurn = true;
-    public static boolean autoJump = true, gates = true, bifrost = true, gatesNoPulsar = true;
+    public static boolean autoJump = true, gates = true, bifrost = true, gatesNoPulsar = true, wormholes = true;
     public static int gateSaving = 10;
     public static boolean debug = false;
 
@@ -76,6 +76,7 @@ public final class BASettings {
         gates = bool("ba_gates", true);
         bifrost = bool("ba_bifrost", true);
         gatesNoPulsar = bool("ba_gatesNoPulsar", true);
+        wormholes = bool("ba_wormholes", true);
         gateSaving = clamp(integer("ba_gateSaving", 10), 0, 90);
         debug = bool("ba_debug", false);
         LOG.info("Auto-er Pilot: settings from " + (useLuna ? "LunaLib" : FILE) + ": enabled " + enabled
@@ -85,7 +86,7 @@ public final class BASettings {
                 + ", hazards " + hazards + " (" + hazardMargin + ")"
                 + ", fleets " + fleets + " (x" + fleetMargin + ", " + fleetClearance + ")"
                 + ", asteroids " + asteroidsSlow + ", wind burn " + windBurn + ", pulsar escape " + pulsarEscape + ", jump without dialog " + autoJump
-                + ", gates " + gates + " (" + gateSaving + " percent, Bifrost " + bifrost + ", skip pulsar systems " + gatesNoPulsar + "), debug " + debug);
+                + ", gates " + gates + " (" + gateSaving + " percent, Bifrost " + bifrost + ", wormholes " + wormholes + ", skip pulsar systems " + gatesNoPulsar + "), debug " + debug);
         return true;
     }
 

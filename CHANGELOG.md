@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.22
+- Wormholes: Gate routes also use wormhole termini when the player can use wormholes. Entries are stable termini, exits are their linked termini.
+- Wormholes: The transit skips the jump dialog and costs the game's wormhole fuel. The dialog opens when the transponder is off and the exit system has markets.
+- Wormholes: Termini in pulsar systems are skipped with "Skip gates in pulsar systems" on.
+- Settings: Added "Use wormholes" (on by default).
+
 ## 0.1.21
 - Gates: Gate routes skip gates, gate beacons and Bifrost gates in star systems with a pulsar beam.
 - Gates: A route under way does not transit when its entry or exit gate is in a pulsar system. The course to the target is laid in again.

@@ -11,6 +11,7 @@ import com.fs.starfarer.api.campaign.JumpPointAPI.JumpDestination;
 import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
+import com.fs.starfarer.api.campaign.impl.items.WormholeScannerPlugin;
 import com.fs.starfarer.api.campaign.listeners.ListenerUtil;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.characters.AbilityPlugin;
@@ -36,7 +37,8 @@ import java.util.Set;
  * Routes laid-in courses through gates when the way through two gates of one network is shorter: course to the entry
  * gate, the transit (the network's own, same costs), then the course to the target again. Networks: the game's gates
  * (once the game offers "Travel through the Gate": $gatesActive and $playerCanUseGates) and AoTD's Bifrost gates (with
- * a Bifrost Control Center). The game's network also exits at gate beacons (non-gate places in its list of gate
+ * a Bifrost Control Center), and wormhole termini (with the Wormhole Scanner; each terminus leads to the others of its
+ * kind, the transit costs the game's wormhole fuel). The game's network also exits at gate beacons (non-gate places in its list of gate
  * destinations, such as a Random Assortment of Things settlement with a Gate Beacon). Each new course target is planned
  * once. A course laid in again for the same target while its route is under way flies direct. A route under way is kept
  * in the player fleet's memory, so it continues after a save load.
@@ -65,7 +67,8 @@ public final class BAGates {
     static final float BIFROST_COOLDOWN = 30f;
 
     /** The route under way, in the player fleet's memory. */
-    static final String K_GOAL = "$ba_gateGoal", K_ENTRY = "$ba_gateEntry", K_EXIT = "$ba_gateExit", K_BIFROST = "$ba_gateBifrost";
+    static final String K_GOAL = "$ba_gateGoal", K_ENTRY = "$ba_gateEntry", K_EXIT = "$ba_gateExit", K_BIFROST = "$ba_gateBifrost",
+            K_WORMHOLE = "$ba_gateWormhole";
 
     static final int NONE = 0, TO_ENTRY = 1, TRANSIT = 2;
     static int stage = NONE;
@@ -84,8 +87,8 @@ public final class BAGates {
     static void setGoal(SectorEntityToken e) { goalRef = new WeakReference<SectorEntityToken>(e); }
     static void setEntry(SectorEntityToken e) { entryRef = new WeakReference<SectorEntityToken>(e); }
     static void setExit(SectorEntityToken e) { exitRef = new WeakReference<SectorEntityToken>(e); }
-    /** The route uses Bifrost gates. */
-    static boolean bifrost;
+    /** The route uses Bifrost gates, or wormhole termini (never both). */
+    static boolean bifrost, wormhole;
     static float waited;
     /** Seconds before a new course is planned, after one was laid in during a transit (the jump has a delay). */
     static float holdPlan;
@@ -100,6 +103,7 @@ public final class BAGates {
         stage = NONE;
         setPlanned(null); setGoal(null); setEntry(null); setExit(null);
         bifrost = false;
+        wormhole = false;
         waited = 0f;
         holdPlan = 0f;
         restoreGoal = false;
@@ -119,6 +123,7 @@ public final class BAGates {
             setEntry((SectorEntityToken) a);
             setExit((SectorEntityToken) b);
             bifrost = Boolean.TRUE.equals(m.get(K_BIFROST));
+            wormhole = Boolean.TRUE.equals(m.get(K_WORMHOLE));
             stage = TO_ENTRY;
             fromSave = true;
             setPlanned(entry());
@@ -178,7 +183,8 @@ public final class BAGates {
                 return;
             }
             if (course == entry()) {
-                if (!usable(entry(), bifrost) || !exitUsable(exit(), bifrost)) {
+                if (wormhole ? wormholeLink(entry(), exit()) == null || !wormholeUsable(entry())
+                        : !usable(entry(), bifrost) || !exitUsable(exit(), bifrost)) {
                     LOG.info("Auto-er Pilot: gate route to " + goal().getName() + " ended: a gate can not be used now; course laid in for it");
                     finish();
                     return;
@@ -238,7 +244,7 @@ public final class BAGates {
         SectorEntityToken in, out;
         Place pin, pout;
         float via;
-        boolean bf;
+        boolean bf, wh;
     }
 
     /** Plans the gate route for a new course target and lays in the course to the entry gate when it is shorter. */
@@ -253,6 +259,8 @@ public final class BAGates {
         Route r = best(f, t, gameGates(), false);
         Route rb = best(f, t, bifrostGates(), true);
         if (r == null || (rb != null && rb.via < r.via)) r = rb;
+        Route rw = bestWormhole(f, t);
+        if (r == null || (rw != null && rw.via < r.via)) r = rw;
         if (r == null) return;
         float direct = leg(f, t);
         if (!BAGeom.gateWorth(direct, r.via, BASettings.gateSaving / 100f, MIN_GAIN)) {
@@ -262,7 +270,8 @@ public final class BAGates {
         }
         float perLY = fleet.getLogistics().getFuelCostPerLightYear();
         float need = perLY * (hyperLY(f, r.pin) + hyperLY(r.pout, t));
-        if (!r.bf) need += (float) Math.ceil(Misc.getDistanceLY(r.in, r.out) * perLY * Misc.GATE_FUEL_COST_MULT);
+        if (r.wh) need += wormholeFuel();
+        else if (!r.bf) need += (float) Math.ceil(Misc.getDistanceLY(r.in, r.out) * perLY * Misc.GATE_FUEL_COST_MULT);
         if (need > fleet.getCargo().getFuel()) {
             LOG.info("Auto-er Pilot: no gate route to " + target.getName() + ": needs about " + Math.round(need) + " fuel");
             return;
@@ -271,6 +280,7 @@ public final class BAGates {
         setEntry(r.in);
         setExit(r.out);
         bifrost = r.bf;
+        wormhole = r.wh;
         stage = TO_ENTRY;
         waited = 0f;
         setPlanned(entry());
@@ -289,7 +299,8 @@ public final class BAGates {
         m.set(K_ENTRY, entry());
         m.set(K_EXIT, exit());
         m.set(K_BIFROST, bifrost);
-        LOG.info("Auto-er Pilot: " + (bifrost ? "Bifrost" : "gate") + " route to " + target.getName() + ": " + where(entry())
+        m.set(K_WORMHOLE, wormhole);
+        LOG.info("Auto-er Pilot: " + net() + " route to " + target.getName() + ": " + where(entry())
                 + " to " + where(exit()) + (beacon(exit()) ? " (gate beacon)" : "") + ", " + Math.round(r.via) + " units, direct "
                 + (direct == Float.MAX_VALUE ? "no way" : Math.round(direct) + " units"));
     }
@@ -335,7 +346,14 @@ public final class BAGates {
     /** Why the transit can not go now, or null. */
     static String blocked() {
         if (!BASettings.enabled || !BASettings.gates) return "gate routing off";
-        if (bifrost) {
+        if (wormhole) {
+            if (!wormholesOpen()) return "wormholes not usable (no Wormhole Scanner, or the setting is off)";
+            if (!wormholeUsable(entry())) return "the entry terminus is unstable";
+            if (wormholeLink(entry(), exit()) == null) return "the termini are no longer linked";
+            float fuel = wormholeFuel();
+            if (fuel > Global.getSector().getPlayerFleet().getCargo().getFuel()) return "not enough fuel (" + Math.round(fuel) + ")";
+            if (BAJump.transponderQuestion(exit())) return "the transponder is off";
+        } else if (bifrost) {
             if (!bifrostOpen()) return "Bifrost network not usable (no Bifrost Control Center, or the setting is off)";
             if (!usable(entry(), true) || !usable(exit(), true)) return "a Bifrost gate is cooling down or not supplied";
             Set<SectorEntityToken> act = bifrostActive();
@@ -364,6 +382,21 @@ public final class BAGates {
             return;
         }
         SectorEntityToken from = entry(), to = exit();
+        if (wormhole) {
+            // the game's jump dialog order for a wormhole destination (JumpPointInteractionDialogPluginImpl)
+            JumpDestination dest = wormholeLink(from, to);
+            float fuel = wormholeFuel();
+            CampaignUIAPI wui = Global.getSector().getCampaignUI();
+            if (wui.getUltimateCourseTarget() == from) wui.clearLaidInCourse();
+            dialog.dismiss();
+            Global.getSector().setPaused(false);
+            Global.getSector().doHyperspaceTransition(fleet, from, dest);
+            fleet.getCargo().removeFuel(fuel);
+            stage = TRANSIT;
+            waited = 0f;
+            LOG.info("Auto-er Pilot: wormhole transit " + where(from) + " to " + where(to) + ", " + Math.round(fuel) + " fuel");
+            return;
+        }
         String cost;
         if (bifrost) {
             dialog.dismiss();
@@ -388,7 +421,7 @@ public final class BAGates {
         ListenerUtil.reportFleetTransitingGate(fleet, from, to);
         stage = TRANSIT;
         waited = 0f;
-        LOG.info("Auto-er Pilot: " + (bifrost ? "Bifrost" : "gate") + " transit " + where(from) + " to " + where(to) + ", " + cost);
+        LOG.info("Auto-er Pilot: " + net() + " transit " + where(from) + " to " + where(to) + ", " + cost);
     }
 
     /** The gate's "in use" effect: GateEntityPlugin directly, Bifrost's plugin through a method handle (visual only). */
@@ -433,6 +466,7 @@ public final class BAGates {
         stage = NONE;
         setGoal(null); setEntry(null); setExit(null);
         bifrost = false;
+        wormhole = false;
         waited = 0f;
         CampaignFleetAPI fleet = Global.getSector().getPlayerFleet();
         if (fleet != null) unsetMemory(fleet.getMemoryWithoutUpdate());
@@ -443,6 +477,66 @@ public final class BAGates {
         m.unset(K_ENTRY);
         m.unset(K_EXIT);
         m.unset(K_BIFROST);
+        m.unset(K_WORMHOLE);
+    }
+
+    /** The route's network for the log. */
+    static String net() { return wormhole ? "wormhole" : bifrost ? "Bifrost" : "gate"; }
+
+    /** The setting allows wormholes and the player can use them (Wormhole Scanner, or the game's flag). */
+    static boolean wormholesOpen() {
+        return BASettings.wormholes && WormholeScannerPlugin.canPlayerUseWormholes();
+    }
+
+    /** A wormhole terminus that can take a transit now: a wormhole jump point in a location, not unstable. */
+    static boolean wormholeUsable(SectorEntityToken e) {
+        if (!(e instanceof JumpPointAPI) || e.isExpired() || e.getContainingLocation() == null) return false;
+        JumpPointAPI jp = (JumpPointAPI) e;
+        return jp.isWormhole() && !jp.getMemoryWithoutUpdate().getBoolean(JumpPointInteractionDialogPluginImpl.UNSTABLE_KEY);
+    }
+
+    /** The entry terminus's destination that leads to the exit terminus, or null. */
+    static JumpDestination wormholeLink(SectorEntityToken entry, SectorEntityToken exit) {
+        if (!(entry instanceof JumpPointAPI) || exit == null) return null;
+        for (JumpDestination d : ((JumpPointAPI) entry).getDestinations()) {
+            if (d != null && d.getDestination() == exit) return d;
+        }
+        return null;
+    }
+
+    /** The game's wormhole fuel: the jump cost (fuel per light year, rounded, at least 1) times WORMHOLE_FUEL_USE_MULT. */
+    static float wormholeFuel() {
+        return BAJump.fuelCost() * JumpPointInteractionDialogPluginImpl.WORMHOLE_FUEL_USE_MULT;
+    }
+
+    /**
+     * The shortest way from f to t through two linked wormhole termini, or null. Entries: usable termini; exits: their
+     * destinations. Termini in pulsar systems are skipped with that setting on.
+     */
+    static Route bestWormhole(Place f, Place t) {
+        if (!wormholesOpen()) return null;
+        Route best = null;
+        for (LocationAPI loc : Global.getSector().getAllLocations()) {
+            if (loc == null || loc.isHyperspace()) continue;
+            for (SectorEntityToken e : loc.getJumpPoints()) {
+                if (!wormholeUsable(e) || skipPulsar(e)) continue;
+                Place pin = Place.of(e);
+                float to = leg(f, pin);
+                if (to == Float.MAX_VALUE) continue;
+                for (JumpDestination d : ((JumpPointAPI) e).getDestinations()) {
+                    SectorEntityToken x = d == null ? null : d.getDestination();
+                    if (x == null || x == e || x.isExpired() || x.getContainingLocation() == null || skipPulsar(x)) continue;
+                    Place pout = Place.of(x);
+                    float from = leg(pout, t);
+                    if (from == Float.MAX_VALUE) continue;
+                    float via = to + GATE_COST + from;
+                    if (best != null && via >= best.via) continue;
+                    best = new Route();
+                    best.in = e; best.out = x; best.pin = pin; best.pout = pout; best.via = via; best.wh = true;
+                }
+            }
+        }
+        return best;
     }
 
     /** The game offers "Travel through the Gate": the Janus Device works ($gatesActive) and the player may use gates. */

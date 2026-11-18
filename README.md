@@ -18,6 +18,7 @@ When your fleet flies itself somewhere (a laid-in course, or a click on a planet
 - Gates: Once you have the Janus Device and At the Gates done, a course goes through two gates when that's at least 10 percent and one light year shorter. It jumps through without the dialog at the normal fuel cost and sets your course again on the other side. Lay in the same course again to fly direct. Gates in a system with a pulsar are skipped, so you don't come out in the beam (you can turn that off).
 - Gate beacons: A Random Assortment of Things settlement with a Gate Beacon can be the exit of a gate route.
 - Bifrost: With AoTD Vaults of Knowledge and a Bifrost Control Center, gate routes use Bifrost gates too (no fuel, same 30-day cooldown).
+- Wormholes: With the Wormhole Scanner, gate routes also use your wormhole termini when that's shorter. It goes through without the dialog at the game's wormhole fuel cost, and it skips a terminus that's still unstable.
 - Taking control back: Holding a mouse button or the go-slow key gives you control back, and so do dialogs, battles and jumps.
 - Settings: Everything has its own switch in LunaLib (F3), or in `data/config/better_autopilot.json` without LunaLib. Nothing shows on screen, and the Debug log setting writes the details to `starsector.log`.
 - Compatibility: It works with Autopilot With Gates and leaves gate routes to it while its ability is on.
