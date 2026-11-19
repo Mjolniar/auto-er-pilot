@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.23
+- Compatibility: Updated for Starsector 0.98.5a-RC8.
+
 ## 0.1.22
 - Wormholes: Gate routes also use wormhole termini when the player can use wormholes. Entries are stable termini, exits are their linked termini.
 - Wormholes: The transit skips the jump dialog and costs the game's wormhole fuel. The dialog opens when the transponder is off and the exit system has markets.
