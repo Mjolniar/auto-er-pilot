@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.27
+- Compatibility: Updated for Starsector 0.98.5a-RC9.
+- Jump points: Jumps without the dialog charge the game's jump pay, as the dialog does.
+- Wormholes: The transit applies the game's jump pay rules, as the jump dialog does.
+
 ## 0.1.26
 - Transverse Jump: After a Transverse Jump the player used, the course stays laid in and the fleet waits until the player resumes it. The pulsar beam escape jump is not held.
 - Settings: Added "Wait after a Transverse Jump" (on by default).

@@ -390,6 +390,9 @@ public final class BAGates {
             if (wui.getUltimateCourseTarget() == from) wui.clearLaidInCourse();
             dialog.dismiss();
             Global.getSector().setPaused(false);
+            // RC9: the dialog's jump order also applies jump pay (only out of a populated system into hyperspace)
+            JumpPointInteractionDialogPluginImpl.computeAndApplyJumpPay(fleet.getContainingLocation(),
+                    dest.getDestination() == null ? null : dest.getDestination().getContainingLocation());
             Global.getSector().doHyperspaceTransition(fleet, from, dest);
             fleet.getCargo().removeFuel(fuel);
             stage = TRANSIT;
