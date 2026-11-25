@@ -21,6 +21,28 @@ import org.lwjgl.input.Mouse;
  */
 final class BAAbilities {
     static final String SB = "sustained_burn", RP = "reverse_polarity", GO_DARK = "go_dark";
+    /** SEEKER's Enhanced Sustained Burn: SEEKER puts it on the ability bar in place of the game's Sustained Burn. */
+    static final String SB_SEEKER = "SKR_sustained_burn";
+
+    /** The Sustained Burn the steering uses: Enhanced Sustained Burn when the fleet has it, else the game's. */
+    static AbilityPlugin sustainedBurn(CampaignFleetAPI fleet) {
+        AbilityPlugin a = fleet.getAbility(SB_SEEKER);
+        return a != null ? a : fleet.getAbility(SB);
+    }
+
+    /** The Sustained Burn that is on now (either one), or null. */
+    static AbilityPlugin activeSB(CampaignFleetAPI fleet) {
+        AbilityPlugin a = fleet.getAbility(SB_SEEKER);
+        if (a != null && a.isActive()) return a;
+        a = fleet.getAbility(SB);
+        return a != null && a.isActive() ? a : null;
+    }
+
+    /** Enhanced Sustained Burn is on: it stops asteroid impacts, so the asteroid slow-down is not needed. */
+    static boolean noAsteroidImpacts(CampaignFleetAPI fleet) {
+        AbilityPlugin a = activeSB(fleet);
+        return a != null && SB_SEEKER.equals(a.getId());
+    }
     /** The ability tag of the game's abilities that hold the fleet slow while they run (Go Dark, Sensor Burst, Interdiction Pulse). */
     static final String SLOW_TAG = "burn-";
     static final long INPUT_WINDOW_NS = 600_000_000L;
@@ -76,8 +98,9 @@ final class BAAbilities {
             }
         } catch (Throwable t) { /* no input devices */ }
 
-        AbilityPlugin sb = fleet.getAbility(SB);
-        boolean on = sb != null && sb.isActive();
+        AbilityPlugin act = activeSB(fleet);
+        AbilityPlugin sb = act != null ? act : sustainedBurn(fleet);
+        boolean on = act != null;
         if (on && !sbWas) {
             if (!sbOnHere) sbPlayerOff = false;   // the player (or the game) turned it on
             sbOnHere = false;
@@ -143,7 +166,7 @@ final class BAAbilities {
         // with the setting off, only Sustained Burn that sbOff turned off for a slipstream is turned back on
         if ((!BASettings.keepSB && !sbRestore) || sbPlayerOff || sbRetryIn > 0f) return;
         if (quiet && !riding) return;
-        AbilityPlugin sb = fleet.getAbility(SB);
+        AbilityPlugin sb = sustainedBurn(fleet);
         if (sb == null || sb.isActiveOrInProgress() || !sb.isUsable()) return;
         if (otherActive(fleet, sb)) return;
         if (distance < SB_MIN_DISTANCE) return;
@@ -175,7 +198,7 @@ final class BAAbilities {
      * off by the game, so keepSustainedBurn turns it back on once the way is clear.
      */
     void sbOff(CampaignFleetAPI fleet, String why) {
-        AbilityPlugin sb = fleet.getAbility(SB);
+        AbilityPlugin sb = activeSB(fleet);
         if (sb == null || !sb.isActive()) return;
         sbOffHere = true;
         sb.deactivate();

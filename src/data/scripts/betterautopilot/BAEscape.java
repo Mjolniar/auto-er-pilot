@@ -67,8 +67,8 @@ final class BAEscape {
         inWind = true;
         if (step != lastStep) { reset(); lastStep = step; }
         float dist = Misc.getDistance(fleet, step);
-        AbilityPlugin sb = fleet.getAbility(BAAbilities.SB);
-        boolean sbOn = sb != null && sb.isActive();
+        AbilityPlugin sb = BAAbilities.activeSB(fleet);
+        boolean sbOn = sb != null;
         String what = wind instanceof PulsarBeamTerrainPlugin ? "a pulsar beam"
                 : (wind instanceof EventHorizonPlugin ? "an event horizon" : "a corona");
 

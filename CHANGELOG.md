@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.24
+- Sustained Burn: Fixed the game's Sustained Burn being switched on in place of SEEKER's Enhanced Sustained Burn. The fleet's Enhanced Sustained Burn is used when it has one.
+- Sustained Burn: Normal burn out of coronas and slipstream exits turn off whichever Sustained Burn is on.
+- Asteroids: No asteroid slow-down while Enhanced Sustained Burn is on. It stops asteroid impacts.
+
 ## 0.1.23
 - Compatibility: Updated for Starsector 0.98.5a-RC8.
 

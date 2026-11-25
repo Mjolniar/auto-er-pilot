@@ -335,7 +335,7 @@ public class BAScript implements EveryFrameScript {
         float vf = Math.max(10f, fleet.getTravelSpeed());
         float accel = Math.max(1f, fleet.getAcceleration());
         // braking: with Sustained Burn on the game cuts acceleration to a fifth while cruising but to 0.6 while braking
-        AbilityPlugin sbA = fleet.getAbility(BAAbilities.SB);
+        AbilityPlugin sbA = BAAbilities.activeSB(fleet);
         float brake = sbA != null && sbA.isActive() ? Math.max(accel, 0.6f * vf) : accel;
         float speed = v.length();
         String why = "straight to the target";
@@ -377,7 +377,8 @@ public class BAScript implements EveryFrameScript {
             float look = BAGeom.brakeDistance(Math.max(speed, vf), slowV, brake) + fleet.getRadius() + 200f;
             if (BAStorms.ahead(h, px, py, dx, dy, look, fleet.getRadius() + 100f) >= 0f) { slow = true; slowText = "storm: moving slowly"; why = slowText; }
         }
-        boolean rocks = !hyper && BASettings.asteroidsSlow;
+        // Enhanced Sustained Burn (SEEKER) stops asteroid impacts while it is on
+        boolean rocks = !hyper && BASettings.asteroidsSlow && !BAAbilities.noAsteroidImpacts(fleet);
 
         // a star, black hole or a point inside a corona or event horizon: stop outside it and end the course there; the
         // way to the stop point goes around other hazards and fleets like any other
