@@ -1,6 +1,6 @@
 fieldID,fieldName,fieldType,defaultValue,secondaryValue,fieldDescription,minValue,maxValue,tab
 ba_header,Auto-er Pilot,Header,Auto-er Pilot,,,,,
-ba_enabled,Enabled,Boolean,true,,"Steers your fleet while it's flying itself to a planet, star, jump point, gate or star system. It won't steer for stations, fleets or other objects. Holding a mouse button, the go-slow key, Sensor Burst or Interdiction Pulse gives you control back for that moment.",,,
+ba_enabled,Enabled,Boolean,true,,"Steers your fleet while it's flying itself to something that's switched on in the Targets tab. By default that's planets, stars, jump points, gates and star systems. Holding a mouse button, the go-slow key, Sensor Burst or Interdiction Pulse gives you control back for that moment.",,,
 ba_stormHeader,Hyperspace storms,Header,Hyperspace storms,,,,,
 ba_storms,Slow down in storms,Boolean,true,,"Slows down inside and just ahead of storming or signaling cells, then burns back up after. The game doesn't strike fleets that are moving slowly.",,,
 ba_stormDetour,Steer around storms,Boolean,true,,Goes around a storm on the way to the target if the detour is short enough. Otherwise it just slows down and goes through.,,,
@@ -35,3 +35,32 @@ ba_gatesNoPulsar,Skip gates in pulsar systems,Boolean,true,,"Gate routes won't u
 ba_gateSaving,Gate route least saving (percent),Int,10,,It only uses gates when the way through them is at least this percent and one light year shorter.,0,90,
 ba_logHeader,Log,Header,Log,,,,,
 ba_debug,Debug log,Boolean,false,,"Writes each steering change, why it isn't steering, the obstacles it found for each target and a status line every 10 seconds to starsector.log. Nothing shows up on screen.",,,
+ba_tHeader,Targets,Header,Targets,,,,,Targets
+ba_tText,,Text,"Turn the autopilot on or off for each kind of thing you can fly to. It goes by what you're flying to right now, so on a course to another system, the jump points on the way count as jump points.",,,,,Targets
+ba_tBodiesHeader,Planets and stars,Header,Planets and stars,,,,,Targets
+ba_tPlanets,Planets,Boolean,true,,"Planets, moons and gas giants that don't have a colony.",,,Targets
+ba_tColonies,Colonies,Boolean,true,,"Planets with a colony on them, yours or anybody else's.",,,Targets
+ba_tStars,Stars and black holes,Boolean,true,,"Stars, neutron stars and black holes.",,,Targets
+ba_tStationsHeader,Stations,Header,Stations,,,,,Targets
+ba_tStations,Stations,Boolean,false,,"Stations with a market (faction stations, pirate and Pather bases, your own, etc.), plus any other station that isn't listed below.",,,Targets
+ba_tAbandoned,Abandoned stations,Boolean,false,,"The game's abandoned stations, the ones you can use for storage.",,,Targets
+ba_tResearch,Research stations,Boolean,false,,Derelict research stations you can salvage.,,,Targets
+ba_tMining,Mining stations,Boolean,false,,Derelict mining stations you can salvage.,,,Targets
+ba_tHabitats,Orbital habitats,Boolean,false,,Derelict orbital habitats you can salvage.,,,Targets
+ba_tSalvageHeader,Salvage,Header,Salvage,,,,,Targets
+ba_tWrecks,Derelict ships,Boolean,false,,Derelict ships you can salvage or recover.,,,Targets
+ba_tCaches,Caches and cargo pods,Boolean,false,,"Supply, equipment, weapon and technology caches, and cargo pods.",,,Targets
+ba_tDebris,Debris fields,Boolean,false,,Debris fields you can salvage.,,,Targets
+ba_tDerelicts,Domain-era derelicts,Boolean,false,,"Survey probes, survey ships, motherships, cryosleepers, gatehaulers and coronal hypershunts.",,,Targets
+ba_tObjectsHeader,Other objects,Header,Other objects,,,,,Targets
+ba_tObjectives,"Relays, buoys and arrays",Boolean,false,,"Comm relays, nav buoys and sensor arrays, makeshift ones too.",,,Targets
+ba_tStable,Stable locations,Boolean,false,,"Stable locations where you can build a relay, buoy or array.",,,Targets
+ba_tBeacons,Warning beacons,Boolean,false,,The warning beacons in hyperspace next to dangerous systems.,,,Targets
+ba_tOther,Everything else,Boolean,false,,"Anything that doesn't fit the other switches, like objects from other mods.",,,Targets
+ba_tTravelHeader,Travel,Header,Travel,,,,,Targets
+ba_tJumpPoints,Jump points,Boolean,true,,Jump points and wormhole termini.,,,Targets
+ba_tGates,Gates,Boolean,true,,"Gates, gate beacons and Bifrost gates.",,,Targets
+ba_tSystems,Star systems and map points,Boolean,true,,"A course to a star system, or to a spot you picked on the map.",,,Targets
+ba_tFleetsHeader,Fleets,Header,Fleets,,,,,Targets
+ba_tHostile,Hostile fleets,Boolean,false,,"Fleets that are hostile to you, battlestations included.",,,Targets
+ba_tFleets,Other fleets,Boolean,false,,"Neutral and friendly fleets, like traders, patrols and your own fleets.",,,Targets

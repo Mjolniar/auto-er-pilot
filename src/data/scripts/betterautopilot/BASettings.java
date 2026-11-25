@@ -32,6 +32,23 @@ public final class BASettings {
     public static int gateSaving = 10;
     public static boolean debug = false;
 
+    /** The Targets tab, one switch per BATargets category (same order). Defaults: what it steered for before 0.1.28. */
+    static final String[] TARGET_IDS = {
+            "ba_tPlanets", "ba_tColonies", "ba_tStars",
+            "ba_tStations", "ba_tAbandoned", "ba_tResearch", "ba_tMining", "ba_tHabitats",
+            "ba_tWrecks", "ba_tCaches", "ba_tDebris", "ba_tDerelicts",
+            "ba_tObjectives", "ba_tStable", "ba_tBeacons", "ba_tOther",
+            "ba_tJumpPoints", "ba_tGates", "ba_tSystems",
+            "ba_tHostile", "ba_tFleets"};
+    static final boolean[] TARGET_DEFAULTS = {
+            true, true, true,
+            false, false, false, false, false,
+            false, false, false, false,
+            false, false, false, false,
+            true, true, true,
+            false, false};
+    public static boolean[] targets = TARGET_DEFAULTS.clone();
+
     static JSONObject file;
     static boolean useLuna;
 
@@ -80,6 +97,13 @@ public final class BASettings {
         wormholes = bool("ba_wormholes", true);
         gateSaving = clamp(integer("ba_gateSaving", 10), 0, 90);
         debug = bool("ba_debug", false);
+        boolean[] t = new boolean[TARGET_IDS.length];
+        StringBuilder on = new StringBuilder();
+        for (int i = 0; i < t.length; i++) {
+            t[i] = bool(TARGET_IDS[i], TARGET_DEFAULTS[i]);
+            if (t[i]) on.append(on.length() == 0 ? "" : ", ").append(BATargets.NAMES[i]);
+        }
+        targets = t;
         LOG.info("Auto-er Pilot: settings from " + (useLuna ? "LunaLib" : FILE) + ": enabled " + enabled
                 + ", storms " + storms + ", storm detour " + stormDetour + " (" + stormDetourShare + " percent)"
                 + ", slipstream exit " + slipExit + ", slipstream use " + slipUse + " (" + slipAngle + " degrees, " + slipSaving + " percent), reverse polarity " + slipReverse + " (inside " + slipReverseInside + "), avoid wrong-way slipstreams " + slipAvoid
@@ -87,7 +111,8 @@ public final class BASettings {
                 + ", hazards " + hazards + " (" + hazardMargin + ")"
                 + ", fleets " + fleets + " (x" + fleetMargin + ", " + fleetClearance + ")"
                 + ", asteroids " + asteroidsSlow + ", wind burn " + windBurn + ", wait after Transverse Jump " + holdAfterJump + ", pulsar escape " + pulsarEscape + ", jump without dialog " + autoJump
-                + ", gates " + gates + " (" + gateSaving + " percent, Bifrost " + bifrost + ", wormholes " + wormholes + ", skip pulsar systems " + gatesNoPulsar + "), debug " + debug);
+                + ", gates " + gates + " (" + gateSaving + " percent, Bifrost " + bifrost + ", wormholes " + wormholes + ", skip pulsar systems " + gatesNoPulsar + "), debug " + debug
+                + "; steers for: " + (on.length() == 0 ? "nothing" : on));
         return true;
     }
 

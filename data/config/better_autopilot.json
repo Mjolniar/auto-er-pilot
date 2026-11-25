@@ -1,5 +1,6 @@
 # Auto-er Pilot settings, used when you don't have LunaLib enabled. With LunaLib, change them in its settings menu (F3).
 # It reads these at startup and on every save load. The ids are the same as the LunaLib rows (data/config/LunaSettings.csv).
+# The ba_t ones are the Targets tab: true means it steers when you're flying to that kind of thing.
 {
   "ba_enabled": true,
   "ba_storms": true,
@@ -28,5 +29,26 @@
   "ba_wormholes": true,
   "ba_gatesNoPulsar": true,
   "ba_gateSaving": 10,
-  "ba_debug": false
+  "ba_debug": false,
+  "ba_tPlanets": true,
+  "ba_tColonies": true,
+  "ba_tStars": true,
+  "ba_tStations": false,
+  "ba_tAbandoned": false,
+  "ba_tResearch": false,
+  "ba_tMining": false,
+  "ba_tHabitats": false,
+  "ba_tWrecks": false,
+  "ba_tCaches": false,
+  "ba_tDebris": false,
+  "ba_tDerelicts": false,
+  "ba_tObjectives": false,
+  "ba_tStable": false,
+  "ba_tBeacons": false,
+  "ba_tOther": false,
+  "ba_tJumpPoints": true,
+  "ba_tGates": true,
+  "ba_tSystems": true,
+  "ba_tHostile": false,
+  "ba_tFleets": false
 }

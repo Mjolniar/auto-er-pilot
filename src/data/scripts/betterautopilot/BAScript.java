@@ -4,14 +4,11 @@ import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
 import com.fs.starfarer.api.campaign.CampaignUIAPI;
-import com.fs.starfarer.api.campaign.JumpPointAPI;
 import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
-import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.characters.AbilityPlugin;
-import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.impl.campaign.terrain.HyperspaceTerrainPlugin;
 import com.fs.starfarer.api.impl.campaign.velfield.SlipstreamTerrainPlugin2;
 import com.fs.starfarer.api.util.Misc;
@@ -24,7 +21,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Steers the player fleet while it flies itself to a travel target (travelTarget): from a laid-in course or a click. Plans
+ * Steers the player fleet while it flies itself to a travel target (a category switched on in the Targets tab, BATargets): from a laid-in course or a click. Plans
  * every 0.15 seconds, applies every frame: a move destination override (one frame each, so the game's own steering takes
  * over the moment this stops) and the game's go-slow for storms. The target changes only at a hazardous target (the
  * course ends outside it); the course also for a gate route (BAGates). A click on empty space is manual flying.
@@ -92,9 +89,9 @@ public class BAScript implements EveryFrameScript {
     static final float SLOW_HOLD = 1f;
     /** A slipstream flowing more than this many degrees away from the target direction counts as flowing away. */
     static final float RP_ANGLE = 110f;
-    /** The last target checked by travelTarget, and the answer. */
+    /** The last target checked, and its category (BATargets); the category's switch is read every frame. */
     private SectorEntityToken checkedStep;
-    private boolean checkedTravel;
+    private int checkedCategory;
     /** Where the trip ends, from the last plan: the target, or the stop point outside a hazard that holds it. */
     private float goalX, goalY;
 
@@ -170,12 +167,13 @@ public class BAScript implements EveryFrameScript {
         SectorEntityToken step = following(ui, fleet, idleWhy);
         // held in a corona, event horizon or pulsar beam with no progress: normal burn, Emergency Burn, Transverse Jump (BAEscape)
         if (escape.check(fleet, ui, step, amount, abilities)) { idle("not steering: Transverse Jump out of a pulsar beam"); return; }
-        if (step != null && step != checkedStep) {
+        // a fleet's category is checked every frame (it can turn hostile on the way)
+        if (step != null && (step != checkedStep || step instanceof CampaignFleetAPI)) {
             checkedStep = step;
-            checkedTravel = travelTarget(step);
+            checkedCategory = BATargets.category(step);
         }
-        if (step != null && !checkedTravel) {
-            idleWhy[0] = "target " + step.getName() + " is not a planet, star, jump point, gate or system";
+        if (step != null && !BATargets.on(checkedCategory)) {
+            idleWhy[0] = "target " + step.getName() + " (" + BATargets.NAMES[checkedCategory] + ") is switched off in Targets";
             step = null;
         }
         if (step == null) {
@@ -251,22 +249,6 @@ public class BAScript implements EveryFrameScript {
         return step;
     }
 
-    /**
-     * Targets the steering works for: planets and stars, jump points, gates, gate beacons (BAGates.beacon), a star
-     * system's hyperspace anchor (a course to a system), and a point in space (the game's location token, named "unknown
-     * location", for a course to a place). Stations, fleets and other objects are left to the player, so fights and close
-     * maneuvers are never steered.
-     */
-    static boolean travelTarget(SectorEntityToken e) {
-        if (e instanceof PlanetAPI || e instanceof JumpPointAPI) return true;
-        if (pointToken(e)) return true;
-        if (e.hasTag(Tags.GATE) || BAGates.beacon(e) || bifrostGate(e)) return true;
-        for (StarSystemAPI sys : Global.getSector().getStarSystems()) {
-            if (sys.getHyperspaceAnchor() == e) return true;
-        }
-        return false;
-    }
-
     /** The game's location token (BaseLocation.LocationToken): a bare point, made for a course to a place. */
     static boolean pointToken(SectorEntityToken e) {
         return e != null && "LocationToken".equals(e.getClass().getSimpleName());
@@ -274,13 +256,13 @@ public class BAScript implements EveryFrameScript {
 
     /**
      * A target that is itself a hazard or only marks a place in one: a star or black hole, a point token, or a system's
-     * hyperspace anchor. The steering stops outside the hazard holding it and ends the course there. A planet, jump point
-     * or gate inside a corona is still flown to.
+     * hyperspace anchor. The steering stops outside the hazard holding it and ends the course there. Anything else inside a
+     * corona (a planet, station, jump point, gate, fleet or other object) is still flown to.
      */
     static boolean hazardousTarget(SectorEntityToken e) {
         if (e instanceof PlanetAPI) return ((PlanetAPI) e).isStar() || ((PlanetAPI) e).isBlackHole();
-        if (e instanceof JumpPointAPI || e.hasTag(Tags.GATE) || BAGates.beacon(e) || bifrostGate(e)) return false;
-        return true;
+        // stations, salvage, fleets and other objects are flown to like planets
+        return pointToken(e) || BATargets.anchor(e);
     }
 
     /** An AoTD Bifrost gate (it has no "gate" tag). */

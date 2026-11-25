@@ -3,7 +3,7 @@
 > [!WARNING]
 > AI-generated. AI coding agents wrote the mod, the docs and the build checks.
 
-When your fleet flies itself somewhere (a laid-in course, or a click on a planet, star, jump point or gate), it steers more like the NPC fleets do. Stations and fleets are left to the game, so fights stay manual.
+When your fleet flies itself somewhere (a laid-in course, or a click on something), it steers more like the NPC fleets do. By default that's for planets, stars, jump points, gates and star systems, and stations, salvage and fleets are left to the game.
 
 - Storms: It slows down in and just ahead of storm cells, since slow fleets don't get struck. If a detour adds 15 percent or less, it goes around.
 - Slipstreams: It rides a slipstream going your way if that saves at least 10 percent of the trip, and it gets off at the best point. Then it fixes the sideways drift.
@@ -21,6 +21,7 @@ When your fleet flies itself somewhere (a laid-in course, or a click on a planet
 - Bifrost: With AoTD Vaults of Knowledge and a Bifrost Control Center, gate routes use Bifrost gates too (no fuel, same 30-day cooldown).
 - Wormholes: With the Wormhole Scanner, gate routes also use your wormhole termini when that's shorter. It goes through without the dialog at the game's wormhole fuel cost, and it skips a terminus that's still unstable.
 - Taking control back: Holding a mouse button or the go-slow key gives you control back, and so do dialogs, battles and jumps.
+- Targets: The Targets tab in LunaLib has a switch for each kind of thing you can fly to, so you can pick what it's used for. That's planets, colonies, stars, stations (with abandoned, research and mining stations and orbital habitats on their own), derelict ships, caches and cargo pods, debris fields, Domain-era derelicts, relays, buoys and arrays, stable locations, warning beacons, jump points, gates, star systems, hostile fleets, other fleets, and everything else. It goes by what you're flying to right now, so on a course to another system, the jump points on the way count as jump points.
 - Settings: Everything has its own switch in LunaLib (F3), or in `data/config/better_autopilot.json` without LunaLib. Nothing shows on screen, and the Debug log setting writes the details to `starsector.log`.
 - Compatibility: It works with Autopilot With Gates and leaves gate routes to it while its ability is on.
 

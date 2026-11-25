@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.28
+- Settings: Added a Targets tab in LunaLib with a switch for each kind of target: planets, colonies, stars, stations, abandoned stations, research stations, mining stations, orbital habitats, derelict ships, caches and cargo pods, debris fields, Domain-era derelicts, relays, buoys and arrays, stable locations, warning beacons, everything else, jump points, gates, star systems and map points, hostile fleets and other fleets.
+- Settings: Defaults are unchanged. Planets, colonies, stars, jump points, gates and star systems are on. The rest are off.
+- Targets: Stations, salvage, fleets and other objects that are switched on are flown to like planets. Only stars, black holes, star systems and map points stop outside a corona.
+- Without LunaLib: The same switches are the ba_t keys in data/config/better_autopilot.json.
+
 ## 0.1.27
 - Compatibility: Updated for Starsector 0.98.5a-RC9.
 - Jump points: Jumps without the dialog charge the game's jump pay, as the dialog does.
