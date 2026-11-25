@@ -21,21 +21,49 @@ import org.lwjgl.input.Mouse;
  */
 final class BAAbilities {
     static final String SB = "sustained_burn", RP = "reverse_polarity", GO_DARK = "go_dark";
-    /** SEEKER's Enhanced Sustained Burn: SEEKER puts it on the ability bar in place of the game's Sustained Burn. */
-    static final String SB_SEEKER = "SKR_sustained_burn";
+    /**
+     * Burn variants of other mods, used when the fleet has them. SEEKER's Enhanced Sustained Burn and Enhanced Emergency
+     * Burn take the game's abilities' places on the ability bar. RAT's Abyssal Burn: 75 percent more burn (the game's
+     * Sustained Burn: 100), acceleration x0.35 (x0.2), less detection, made for the Abyssal Depths; it cancels any go-slow
+     * while it is on.
+     */
+    static final String SB_SEEKER = "SKR_sustained_burn", SB_ABYSS = "rat_abyssal_burn";
+    static final String EB = "emergency_burn", EB_SEEKER = "SKR_emergency_burn";
+    /** RAT's Abyssal Depths system tag. */
+    static final String ABYSS_TAG = "rat_abyssal_depths";
+    private static final String[] SB_ORDER = {SB_SEEKER, SB, SB_ABYSS}, SB_ORDER_ABYSS = {SB_ABYSS, SB_SEEKER, SB};
 
-    /** The Sustained Burn the steering uses: Enhanced Sustained Burn when the fleet has it, else the game's. */
+    /**
+     * The Sustained Burn the steering turns on: in the Abyssal Depths, Abyssal Burn first; elsewhere Enhanced Sustained
+     * Burn, then the game's, then Abyssal Burn (less top speed).
+     */
     static AbilityPlugin sustainedBurn(CampaignFleetAPI fleet) {
-        AbilityPlugin a = fleet.getAbility(SB_SEEKER);
-        return a != null ? a : fleet.getAbility(SB);
+        boolean abyss = fleet.getContainingLocation() != null && fleet.getContainingLocation().hasTag(ABYSS_TAG);
+        for (String id : abyss ? SB_ORDER_ABYSS : SB_ORDER) {
+            AbilityPlugin a = fleet.getAbility(id);
+            if (a != null) return a;
+        }
+        return null;
     }
 
-    /** The Sustained Burn that is on now (either one), or null. */
+    /** The Sustained Burn that is on now (any kind), or null. */
     static AbilityPlugin activeSB(CampaignFleetAPI fleet) {
-        AbilityPlugin a = fleet.getAbility(SB_SEEKER);
-        if (a != null && a.isActive()) return a;
-        a = fleet.getAbility(SB);
-        return a != null && a.isActive() ? a : null;
+        for (String id : SB_ORDER) {
+            AbilityPlugin a = fleet.getAbility(id);
+            if (a != null && a.isActive()) return a;
+        }
+        return null;
+    }
+
+    /** Abyssal Burn is on: it cancels the go-slow, so it goes off while the steering slows the fleet. */
+    static boolean cancelsSlow(AbilityPlugin a) {
+        return a != null && SB_ABYSS.equals(a.getId());
+    }
+
+    /** The Emergency Burn the steering uses: Enhanced Emergency Burn when the fleet has it, else the game's. */
+    static AbilityPlugin emergencyBurn(CampaignFleetAPI fleet) {
+        AbilityPlugin a = fleet.getAbility(EB_SEEKER);
+        return a != null ? a : fleet.getAbility(EB);
     }
 
     /** Enhanced Sustained Burn is on: it stops asteroid impacts, so the asteroid slow-down is not needed. */
@@ -167,7 +195,7 @@ final class BAAbilities {
         if ((!BASettings.keepSB && !sbRestore) || sbPlayerOff || sbRetryIn > 0f) return;
         if (quiet && !riding) return;
         AbilityPlugin sb = sustainedBurn(fleet);
-        if (sb == null || sb.isActiveOrInProgress() || !sb.isUsable()) return;
+        if (sb == null || sb.isActiveOrInProgress() || !sb.isUsable() || activeSB(fleet) != null) return;
         if (otherActive(fleet, sb)) return;
         if (distance < SB_MIN_DISTANCE) return;
         float seconds;

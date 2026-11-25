@@ -661,6 +661,8 @@ public class BAScript implements EveryFrameScript {
      * while Go Dark holds the fleet slow. An aim point that is not a finite number is never sent (it would be saved).
      */
     private void apply(CampaignFleetAPI fleet) {
+        // Abyssal Burn cancels the go-slow: off while the steering slows for storms or asteroids (back on later)
+        if (slow && BAAbilities.cancelsSlow(BAAbilities.activeSB(fleet))) abilities.sbOff(fleet, "Abyssal Burn cancels the slow-down");
         if (slow) {
             fleet.goSlowOneFrame(false);
             slowSentAgo = 0f;

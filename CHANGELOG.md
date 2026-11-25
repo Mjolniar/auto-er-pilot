@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.25
+- Sustained Burn: Uses RAT's Abyssal Burn in the Abyssal Depths. Elsewhere the order is Enhanced Sustained Burn, the game's Sustained Burn, then Abyssal Burn.
+- Sustained Burn: Abyssal Burn is turned off while the steering slows down for storms or asteroids. Sustained Burn comes back on after.
+- Sustained Burn: No second Sustained Burn kind is turned on while one is on.
+- Emergency Burn: Uses SEEKER's Enhanced Emergency Burn when the fleet has it.
+
 ## 0.1.24
 - Sustained Burn: Fixed the game's Sustained Burn being switched on in place of SEEKER's Enhanced Sustained Burn. The fleet's Enhanced Sustained Burn is used when it has one.
 - Sustained Burn: Normal burn out of coronas and slipstream exits turn off whichever Sustained Burn is on.

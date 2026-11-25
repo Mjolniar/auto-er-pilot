@@ -105,7 +105,7 @@ final class BAEscape {
 
     /** Uses Emergency Burn; returns null when it started, else why not. */
     private static String emergencyBurn(CampaignFleetAPI fleet) {
-        AbilityPlugin eb = fleet.getAbility(EB);
+        AbilityPlugin eb = BAAbilities.emergencyBurn(fleet);
         if (eb == null) return "not known";
         if (!eb.isUsable()) return "on cooldown or short of fuel";
         if (BAAbilities.otherActive(fleet, eb)) return "another ability is on that it does not go with";
