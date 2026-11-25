@@ -27,7 +27,7 @@ public final class BASettings {
     public static float fleetMargin = 1f;
     public static int fleetClearance = 800;
     public static boolean asteroidsSlow = true;
-    public static boolean pulsarEscape = true, windBurn = true;
+    public static boolean pulsarEscape = true, windBurn = true, holdAfterJump = true;
     public static boolean autoJump = true, gates = true, bifrost = true, gatesNoPulsar = true, wormholes = true;
     public static int gateSaving = 10;
     public static boolean debug = false;
@@ -72,6 +72,7 @@ public final class BASettings {
         asteroidsSlow = bool("ba_asteroidsSlow", true);
         pulsarEscape = bool("ba_pulsarEscape", true);
         windBurn = bool("ba_windBurn", true);
+        holdAfterJump = bool("ba_holdAfterJump", true);
         autoJump = bool("ba_autoJump", true);
         gates = bool("ba_gates", true);
         bifrost = bool("ba_bifrost", true);
@@ -85,7 +86,7 @@ public final class BASettings {
                 + ", keep sustained burn " + keepSB
                 + ", hazards " + hazards + " (" + hazardMargin + ")"
                 + ", fleets " + fleets + " (x" + fleetMargin + ", " + fleetClearance + ")"
-                + ", asteroids " + asteroidsSlow + ", wind burn " + windBurn + ", pulsar escape " + pulsarEscape + ", jump without dialog " + autoJump
+                + ", asteroids " + asteroidsSlow + ", wind burn " + windBurn + ", wait after Transverse Jump " + holdAfterJump + ", pulsar escape " + pulsarEscape + ", jump without dialog " + autoJump
                 + ", gates " + gates + " (" + gateSaving + " percent, Bifrost " + bifrost + ", wormholes " + wormholes + ", skip pulsar systems " + gatesNoPulsar + "), debug " + debug);
         return true;
     }

@@ -162,6 +162,9 @@ final class BAAbilities {
      * A new target: a turn-off by the player applies to one target only, and Sustained Burn turned off for a slipstream of
      * the last target is not turned back on for this one with the setting off.
      */
+    /** A key (not Shift, Ctrl, Alt or Space) or mouse button was pressed within ns nanoseconds. */
+    boolean inputWithin(long ns) { return System.nanoTime() - inputAt < ns; }
+
     void newTarget() { sbPlayerOff = false; sbRestore = false; }
 
     /**

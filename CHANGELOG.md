@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.26
+- Transverse Jump: After a Transverse Jump the player used, the course stays laid in and the fleet waits until the player resumes it. The pulsar beam escape jump is not held.
+- Settings: Added "Wait after a Transverse Jump" (on by default).
+
 ## 0.1.25
 - Sustained Burn: Uses RAT's Abyssal Burn in the Abyssal Depths. Elsewhere the order is Enhanced Sustained Burn, the game's Sustained Burn, then Abyssal Burn.
 - Sustained Burn: Abyssal Burn is turned off while the steering slows down for storms or asteroids. Sustained Burn comes back on after.

@@ -22,6 +22,7 @@
   "ba_windBurn": true,
   "ba_pulsarEscape": true,
   "ba_autoJump": true,
+  "ba_holdAfterJump": true,
   "ba_gates": true,
   "ba_bifrost": true,
   "ba_wormholes": true,

@@ -62,6 +62,8 @@ public class BAScript implements EveryFrameScript {
     private final BAAbilities abilities = new BAAbilities();
     /** Out of a corona, event horizon or pulsar beam that holds the fleet: normal burn, Emergency Burn, Transverse Jump. */
     private final BAEscape escape = new BAEscape();
+    /** After a Transverse Jump the player used: the fleet waits until the player resumes the course. */
+    private final BAHold hold = new BAHold();
     /** Crossing a slipstream that does not flow toward the target, without a usable Reverse Polarity. */
     private final BACross cross = new BACross();
     /** Seconds before Reverse Polarity may be switched again. */
@@ -151,6 +153,7 @@ public class BAScript implements EveryFrameScript {
         if (sector.isPaused()) return;
         // a Transverse Jump out of a pulsar beam under way: followed before the hand-off checks (the jump slows the fleet)
         if (escape.busy() && escape.check(fleet, ui, null, amount, abilities)) { idle("not steering: Transverse Jump out of a pulsar beam"); return; }
+        if (hold.check(fleet, ui, abilities, escape.busy())) { idle("not steering: waiting after a Transverse Jump"); return; }
         if (rpHold > 0f) rpHold -= amount;
         if (slowHold > 0f) slowHold -= amount;
         if (slowSentAgo < 99f) slowSentAgo += amount;
