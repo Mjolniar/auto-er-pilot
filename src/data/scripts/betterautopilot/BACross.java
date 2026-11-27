@@ -26,7 +26,7 @@ final class BACross {
 
     // the crossing in progress
     private SlipstreamTerrainPlugin2 s;
-    private float ax, ay, fx, fy, cx, cy, nx, ny, half;
+    private float ax, ay, fx, fy, cx, cy, nx, ny, half, core;
     boolean active;
 
     void reset() { active = false; s = null; }
@@ -42,7 +42,11 @@ final class BACross {
             if (progress > half) reset();
             else {
                 Step st = new Step();
-                if (progress < -half && BAGeom.dist(px, py, ax, ay) > 300f) {
+                // along the stream from the crossing line (the flow is across n)
+                float along = Math.abs(-(px - cx) * ny + (py - cy) * nx);
+                // outside the stream and not at the crossing yet: line up first (also from within the margin band, so a
+                // fleet beside the stream does not cut across diagonally to a crossing far along it)
+                if ((progress < -half || (progress < -core && along > 300f)) && BAGeom.dist(px, py, ax, ay) > 300f) {
                     st.x = ax;
                     st.y = ay;
                     st.why = "slipstream: lining up to cross";
@@ -91,6 +95,8 @@ final class BACross {
             float hw = hit.s.getWidth(d) / 2f + margin;
             float[] cp = BAGeom.crossPoints(cd.x, cd.y, fd[0], fd[1], hw, tx, ty);
             if (hit.s.containsPoint(new Vector2f(cp[2], cp[3]), fleet.getRadius())) continue;   // the stream bends back here
+            // the fleet must be on this side of the crossing (a curved stream can put it past one further along)
+            if ((px - cd.x) * cp[0] + (py - cd.y) * cp[1] > -hit.s.getWidth(d) / 2f) continue;
             float b = hit.s.getFaderBrightness(d);
             float wind = b < 0.1f ? 0f
                     : Misc.getSpeedForBurnLevel(hit.s.getParams().burnLevel * hit.s.getWidthBasedSpeedMult(d) * Math.min(1f, b));
@@ -98,7 +104,7 @@ final class BACross {
             if (cost < best) {
                 best = cost;
                 s = hit.s;
-                cx = cd.x; cy = cd.y; nx = cp[0]; ny = cp[1]; half = hw;
+                cx = cd.x; cy = cd.y; nx = cp[0]; ny = cp[1]; half = hw; core = hit.s.getWidth(d) / 2f;
                 ax = cp[2]; ay = cp[3]; fx = cp[4]; fy = cp[5];
                 active = true;
             }

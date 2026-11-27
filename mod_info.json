@@ -2,7 +2,7 @@
   "id": "better_autopilot",
   "name": "Auto-er Pilot",
   "author": "Mjolniar",
-  "version": "0.1.28",
+  "version": "0.1.29",
   "description": "Makes your fleet steer more like the NPC fleets do while it's flying itself to a planet, star, jump point, gate or star system. It slows down in hyperspace storms and asteroid fields, rides slipstreams and gets off at the right spot, switches Reverse Polarity for them, fixes the drift after one, turns Sustained Burn on for long trips, and goes around coronas, black holes and stronger hostile fleets. It also skips the jump dialog and routes courses through gates and AoTD Bifrost gates when that's shorter. Settings are in LunaLib, or data/config/better_autopilot.json if you don't use it.",
   "gameVersion": "0.98.5a-RC9",
   "utility": true,

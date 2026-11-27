@@ -38,6 +38,13 @@ public class BAScript implements EveryFrameScript {
     private boolean darkSlow;
     private float aimX, aimY;
     private String state = "";
+    /**
+     * Debug log: a new state is written once it has held NOTE_HOLD seconds, so states that flip back and forth within a
+     * second (storm slow-down and detour, mouse and go-slow, the steps of a jump) are not each written.
+     */
+    static final float NOTE_HOLD = 1f;
+    private String pending;
+    private float pendingSince, clock;
     private Object stickyKey;
     private int stickySide;
     private boolean wasInSlip;
@@ -92,8 +99,9 @@ public class BAScript implements EveryFrameScript {
     /** The last target checked, and its category (BATargets); the category's switch is read every frame. */
     private SectorEntityToken checkedStep;
     private int checkedCategory;
-    /** Where the trip ends, from the last plan: the target, or the stop point outside a hazard that holds it. */
+    /** Where the trip ends, from the last plan (for goalStep): the target, or the stop point outside a hazard that holds it. */
     private float goalX, goalY;
+    private SectorEntityToken goalStep;
 
     @Override
     public boolean isDone() { return false; }
@@ -122,6 +130,7 @@ public class BAScript implements EveryFrameScript {
     }
 
     private void frame(float amount) {
+        clock += amount;
         SectorAPI sector = Global.getSector();
         if (sector == null) return;
         CampaignFleetAPI fleet = sector.getPlayerFleet();
@@ -137,7 +146,8 @@ public class BAScript implements EveryFrameScript {
         }
         if (!BASettings.enabled) {
             // an escape jump under way is still followed to its end (its course check)
-            if (!sector.isPaused() && escape.busy()) escape.check(fleet, ui, null, amount, abilities);
+            if (!sector.isPaused() && escape.busy()) escape.check(fleet, ui, null, 0f, amount, abilities);
+            hold.check(fleet, ui, abilities, false);   // ends a wait after a Transverse Jump (turned back on mid-trip, no stop)
             // turned off in the settings: Reverse Polarity turned on here goes off where that is free (outside a stream)
             abilities.track(fleet);   // also clears the memory flag when Reverse Polarity is already off
             if (abilities.rpMine && !sector.isPaused() && !Misc.isInsideSlipstream(fleet)) {
@@ -149,7 +159,7 @@ public class BAScript implements EveryFrameScript {
         abilities.track(fleet);
         if (sector.isPaused()) return;
         // a Transverse Jump out of a pulsar beam under way: followed before the hand-off checks (the jump slows the fleet)
-        if (escape.busy() && escape.check(fleet, ui, null, amount, abilities)) { idle("not steering: Transverse Jump out of a pulsar beam"); return; }
+        if (escape.busy() && escape.check(fleet, ui, null, 0f, amount, abilities)) { idle("not steering: Transverse Jump out of a pulsar beam"); return; }
         if (hold.check(fleet, ui, abilities, escape.busy())) { idle("not steering: waiting after a Transverse Jump"); return; }
         if (rpHold > 0f) rpHold -= amount;
         if (slowHold > 0f) slowHold -= amount;
@@ -165,13 +175,21 @@ public class BAScript implements EveryFrameScript {
             darkSlow = true;
         }
         SectorEntityToken step = following(ui, fleet, idleWhy);
-        // held in a corona, event horizon or pulsar beam with no progress: normal burn, Emergency Burn, Transverse Jump (BAEscape)
-        if (escape.check(fleet, ui, step, amount, abilities)) { idle("not steering: Transverse Jump out of a pulsar beam"); return; }
         // a fleet's category is checked every frame (it can turn hostile on the way)
         if (step != null && (step != checkedStep || step instanceof CampaignFleetAPI)) {
             checkedStep = step;
             checkedCategory = BATargets.category(step);
         }
+        // held in a corona, event horizon or pulsar beam with no progress: normal burn, Emergency Burn, Transverse Jump
+        // (BAEscape). Only for targets switched on, and not for fleets (a moving target gives no measure of progress).
+        // Progress counts toward where the trip ends: the stop point outside a hazard that holds the target, else the target.
+        SectorEntityToken escStep = step != null && BATargets.on(checkedCategory) && !(step instanceof CampaignFleetAPI) ? step : null;
+        float goalDist = 0f;
+        if (escStep != null) {
+            Vector2f fp0 = fleet.getLocation();
+            goalDist = goalStep == escStep ? BAGeom.dist(fp0.x, fp0.y, goalX, goalY) : Misc.getDistance(fleet, escStep);
+        }
+        if (escape.check(fleet, ui, escStep, goalDist, amount, abilities)) { idle("not steering: Transverse Jump out of a pulsar beam"); return; }
         if (step != null && !BATargets.on(checkedCategory)) {
             idleWhy[0] = "target " + step.getName() + " (" + BATargets.NAMES[checkedCategory] + ") is switched off in Targets";
             step = null;
@@ -261,8 +279,10 @@ public class BAScript implements EveryFrameScript {
      */
     static boolean hazardousTarget(SectorEntityToken e) {
         if (e instanceof PlanetAPI) return ((PlanetAPI) e).isStar() || ((PlanetAPI) e).isBlackHole();
-        // stations, salvage, fleets and other objects are flown to like planets
-        return pointToken(e) || BATargets.anchor(e);
+        // stations, salvage, fleets and other objects are flown to like planets; system anchors are only in hyperspace
+        if (pointToken(e)) return true;
+        LocationAPI where = e.getContainingLocation();
+        return where != null && where.isHyperspace() && BATargets.anchor(e);
     }
 
     /** An AoTD Bifrost gate (it has no "gate" tag). */
@@ -301,8 +321,11 @@ public class BAScript implements EveryFrameScript {
     }
 
     private void note(String why) {
-        if (why.equals(state)) return;
+        if (why.equals(state)) { pending = null; return; }
+        if (!why.equals(pending)) { pending = why; pendingSince = clock; return; }
+        if (clock - pendingSince < NOTE_HOLD) return;
         state = why;
+        pending = null;
         if (BASettings.debug) LOG.info("Auto-er Pilot: " + why);
     }
 
@@ -316,6 +339,7 @@ public class BAScript implements EveryFrameScript {
         float px = p.x, py = p.y, tx = t.x, ty = t.y;
         goalX = tx;
         goalY = ty;
+        goalStep = step;
         boolean hyper = loc.isHyperspace();
         float vf = Math.max(10f, fleet.getTravelSpeed());
         float accel = Math.max(1f, fleet.getAcceleration());

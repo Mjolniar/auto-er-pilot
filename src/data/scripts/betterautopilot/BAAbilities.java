@@ -197,6 +197,8 @@ final class BAAbilities {
         // with the setting off, only Sustained Burn that sbOff turned off for a slipstream is turned back on
         if ((!BASettings.keepSB && !sbRestore) || sbPlayerOff || sbRetryIn > 0f) return;
         if (quiet && !riding) return;
+        // no fuel in hyperspace: the game's Sustained Burn is not usable then; modded kinds may not check it
+        if (fleet.isInHyperspace() && fleet.getCargo().getFuel() <= 0f) return;
         AbilityPlugin sb = sustainedBurn(fleet);
         if (sb == null || sb.isActiveOrInProgress() || !sb.isUsable() || activeSB(fleet) != null) return;
         if (otherActive(fleet, sb)) return;

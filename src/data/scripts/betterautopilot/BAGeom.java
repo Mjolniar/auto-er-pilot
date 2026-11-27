@@ -83,7 +83,7 @@ public final class BAGeom {
      * Next point on the way from P to T around circle C.
      * Returns {x, y, path length, side} or null when segment P-T clears the circle or T is inside it.
      * P inside the circle: a point out of it, away from the centre and turned toward T, side 0.
-     * preferSide +1 or -1 keeps that side unless the other side is more than 10 percent shorter.
+     * preferSide +1 or -1 keeps that side unless the other side is more than 10 percent shorter; +2 or -2 forces it.
      * step: least distance to the returned point. A nearer tangent point moves on along the circle.
      */
     public static float[] detour(float px, float py, float tx, float ty, float cx, float cy, float r, int preferSide, float step) {
@@ -93,7 +93,7 @@ public final class BAGeom {
         if (dP <= r) {
             float ux, uy;
             if (dP > 1f) { ux = (px - cx) / dP; uy = (py - cy) / dP; }
-            else { ux = (cx - tx) / dT; uy = (cy - ty) / dT; }
+            else { ux = (tx - cx) / dT; uy = (ty - cy) / dT; }
             float tl = dist(px, py, tx, ty);
             float wx = ux, wy = uy;
             if (tl > 0f) { wx += 0.7f * (tx - px) / tl; wy += 0.7f * (ty - py) / tl; }
@@ -109,6 +109,8 @@ public final class BAGeom {
         int side = ccw <= cw ? 1 : -1;
         if (preferSide == 1 && ccw <= cw * 1.1f) side = 1;
         if (preferSide == -1 && cw <= ccw * 1.1f) side = -1;
+        if (preferSide == 2) side = 1;     // forced sides (route: the other side when this one is blocked)
+        if (preferSide == -2) side = -1;
         float length = side == 1 ? ccw : cw;
 
         float aP = (float) Math.atan2(py - cy, px - cx);
@@ -158,6 +160,12 @@ public final class BAGeom {
             int prefer = first.key != null && first.key == stickyKey ? stickySide : 0;
             float[] d = detour(px, py, gx, gy, first.x, first.y, first.r, prefer, step);
             if (d == null) break;
+            // the detour point lies in another circle (overlapping circles kept apart, or of other kinds): the other
+            // side of this circle, when its point is clear
+            if (d[3] != 0f && blockedBy(left, first, d[0], d[1], tx, ty)) {
+                float[] o = detour(px, py, gx, gy, first.x, first.y, first.r, d[3] > 0f ? -2 : 2, step);
+                if (o != null && !blockedBy(left, first, o[0], o[1], tx, ty)) d = o;
+            }
             gx = d[0];
             gy = d[1];
             out.x = gx;
@@ -169,6 +177,15 @@ public final class BAGeom {
             left.remove(first);
         }
         return out;
+    }
+
+    /** True when (x, y) is inside a circle of list other than self that does not hold the target (tx, ty). */
+    static boolean blockedBy(List<Circle> list, Circle self, float x, float y, float tx, float ty) {
+        for (Circle c : list) {
+            if (c == self || dist(tx, ty, c.x, c.y) <= c.r) continue;
+            if (dist(x, y, c.x, c.y) < c.r) return true;
+        }
+        return false;
     }
 
     /** Joins overlapping circles of the same kind into one circle that holds both, until none overlap. */

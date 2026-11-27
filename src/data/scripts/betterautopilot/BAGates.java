@@ -29,6 +29,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -138,8 +139,10 @@ public final class BAGates {
         if (holdPlan > 0f) holdPlan -= amount;
         boolean saved = fromSave;
         fromSave = false;
-        if (stage != NONE && (goal() == null || entry() == null || exit() == null)) {
+        if (stage != NONE && (gone(goal()) || gone(entry()) || gone(exit()))) {
             LOG.info("Auto-er Pilot: gate route dropped: its target or a gate is gone");
+            // the course still leads to the entry gate: cleared, since the trip it was for is gone
+            if (entry() != null && ui.getUltimateCourseTarget() == entry()) ui.clearLaidInCourse();
             restoreGoal = false;
             clear();
         }
@@ -169,9 +172,10 @@ public final class BAGates {
         }
         boolean on = BASettings.enabled && BASettings.gates;
         if (stage == TO_ENTRY) {
-            if (course == null && (saved || throughGate(fleet))) {
-                // saved during the transit (the fleet is at the exit gate), or saved with no course while the route waited
-                // for its course back: the course to the target is laid in
+            if ((course == null && saved) || ((course == null || course == entry()) && throughGate(fleet))) {
+                // saved during the transit (the fleet is at the exit gate), saved with no course while the route waited
+                // for its course back, or through the gate by the game's own dialog (GateCMD keeps the course to the
+                // entry gate): the course to the target is laid in
                 LOG.info("Auto-er Pilot: " + (saved ? "route taken up from the save without a course" : "at " + where(exit()))
                         + "; course laid in for " + goal().getName());
                 finish();
@@ -256,24 +260,30 @@ public final class BAGates {
             return;
         }
         Place f = Place.of(fleet), t = Place.of(target);
-        Route r = best(f, t, gameGates(), false);
-        Route rb = best(f, t, bifrostGates(), true);
-        if (r == null || (rb != null && rb.via < r.via)) r = rb;
-        Route rw = bestWormhole(f, t);
-        if (r == null || (rw != null && rw.via < r.via)) r = rw;
-        if (r == null) return;
+        // the shortest route of each network, shortest first; the first one worth it with enough fuel is taken
+        List<Route> cands = new ArrayList<Route>();
+        Route rg = best(f, t, gameGates(), false), rb = best(f, t, bifrostGates(), true), rw = bestWormhole(f, t);
+        if (rg != null) cands.add(rg);
+        if (rb != null) cands.add(rb);
+        if (rw != null) cands.add(rw);
+        if (cands.isEmpty()) return;
+        Collections.sort(cands, new Comparator<Route>() {
+            @Override public int compare(Route a, Route b) { return Float.compare(a.via, b.via); }
+        });
         float direct = leg(f, t);
-        if (!BAGeom.gateWorth(direct, r.via, BASettings.gateSaving / 100f, MIN_GAIN)) {
-            if (BASettings.debug) LOG.info("Auto-er Pilot: no gate route to " + target.getName() + ": " + Math.round(r.via)
-                    + " units through " + where(r.in) + " and " + where(r.out) + ", " + Math.round(direct) + " direct");
-            return;
+        Route r = null;
+        float shortNeed = -1f;
+        for (Route c : cands) {
+            if (!BAGeom.gateWorth(direct, c.via, BASettings.gateSaving / 100f, MIN_GAIN)) continue;
+            float need = fuelNeed(fleet, f, t, c);
+            if (need > fleet.getCargo().getFuel()) { if (shortNeed < 0f) shortNeed = need; continue; }
+            r = c;
+            break;
         }
-        float perLY = fleet.getLogistics().getFuelCostPerLightYear();
-        float need = perLY * (hyperLY(f, r.pin) + hyperLY(r.pout, t));
-        if (r.wh) need += wormholeFuel();
-        else if (!r.bf) need += (float) Math.ceil(Misc.getDistanceLY(r.in, r.out) * perLY * Misc.GATE_FUEL_COST_MULT);
-        if (need > fleet.getCargo().getFuel()) {
-            LOG.info("Auto-er Pilot: no gate route to " + target.getName() + ": needs about " + Math.round(need) + " fuel");
+        if (r == null) {
+            if (shortNeed >= 0f) LOG.info("Auto-er Pilot: no gate route to " + target.getName() + ": needs about " + Math.round(shortNeed) + " fuel");
+            else if (BASettings.debug) LOG.info("Auto-er Pilot: no gate route to " + target.getName() + ": " + Math.round(cands.get(0).via)
+                    + " units through " + where(cands.get(0).in) + " and " + where(cands.get(0).out) + ", " + Math.round(direct) + " direct");
             return;
         }
         setGoal(target);
@@ -305,7 +315,29 @@ public final class BAGates {
                 + (direct == Float.MAX_VALUE ? "no way" : Math.round(direct) + " units"));
     }
 
-    /** The shortest way from f to t through two gates of one network, or null. A gate beacon is an exit only. */
+    /**
+     * Fuel for route r: hyperspace on the legs to the entry and from the exit, a jump out of a system on each of those
+     * legs that leaves one (BAJump.fuelCost), and the transit (gate: GateCMD's cost; wormhole: the game's; Bifrost: none).
+     */
+    static float fuelNeed(CampaignFleetAPI fleet, Place f, Place t, Route r) {
+        float perLY = fleet.getLogistics().getFuelCostPerLightYear();
+        float need = perLY * (hyperLY(f, r.pin) + hyperLY(r.pout, t));
+        if (f.loc != null && f.loc != r.pin.loc && !f.loc.isHyperspace()) need += BAJump.fuelCost();
+        if (r.pout.loc != null && r.pout.loc != t.loc && !r.pout.loc.isHyperspace()) need += BAJump.fuelCost();
+        if (r.wh) need += wormholeFuel();
+        else if (!r.bf) need += (float) Math.ceil(Misc.getDistanceLY(r.in, r.out) * perLY * Misc.GATE_FUEL_COST_MULT);
+        return need;
+    }
+
+    /** A route entity that no longer exists: null, expired or in no location. */
+    static boolean gone(SectorEntityToken e) {
+        return e == null || e.isExpired() || e.getContainingLocation() == null;
+    }
+
+    /**
+     * The shortest way from f to t through two gates of one network, or null. A gate beacon is an exit only, and so is a
+     * Bifrost gate that can not start a transit now (cooling down or not supplied).
+     */
     static Route best(Place f, Place t, List<SectorEntityToken> gates, boolean bf) {
         int n = gates.size();
         if (n < 2) return null;
@@ -313,7 +345,8 @@ public final class BAGates {
         Place[] g = new Place[n];
         for (int i = 0; i < n; i++) {
             g[i] = Place.of(gates.get(i));
-            to[i] = !bf && beacon(gates.get(i)) ? Float.MAX_VALUE : leg(f, g[i]);
+            boolean exitOnly = bf ? !usable(gates.get(i), true) : beacon(gates.get(i));
+            to[i] = exitOnly ? Float.MAX_VALUE : leg(f, g[i]);
             from[i] = leg(g[i], t);
         }
         int[] p = BAGeom.bestPair(to, from);
@@ -355,7 +388,8 @@ public final class BAGates {
             if (BAJump.transponderQuestion(exit())) return "the transponder is off";
         } else if (bifrost) {
             if (!bifrostOpen()) return "Bifrost network not usable (no Bifrost Control Center, or the setting is off)";
-            if (!usable(entry(), true) || !usable(exit(), true)) return "a Bifrost gate is cooling down or not supplied";
+            if (!usable(entry(), true)) return "the entry Bifrost gate is cooling down or not supplied";
+            if (!bifrostExit(exit())) return "the exit Bifrost gate was used";
             Set<SectorEntityToken> act = bifrostActive();
             if (act != null && (!act.contains(entry()) || !act.contains(exit()))) return "a Bifrost gate's section is not active";
         } else {
@@ -391,8 +425,10 @@ public final class BAGates {
             dialog.dismiss();
             Global.getSector().setPaused(false);
             // RC9: the dialog's jump order also applies jump pay (only out of a populated system into hyperspace)
-            JumpPointInteractionDialogPluginImpl.computeAndApplyJumpPay(fleet.getContainingLocation(),
-                    dest.getDestination() == null ? null : dest.getDestination().getContainingLocation());
+            try {
+                JumpPointInteractionDialogPluginImpl.computeAndApplyJumpPay(fleet.getContainingLocation(),
+                        dest.getDestination() == null ? null : dest.getDestination().getContainingLocation());
+            } catch (Throwable t) { /* before RC9 the game has no jump pay */ }
             Global.getSector().doHyperspaceTransition(fleet, from, dest);
             fleet.getCargo().removeFuel(fuel);
             stage = TRANSIT;
@@ -594,7 +630,14 @@ public final class BAGates {
 
     /** An exit that can take a transit now: a usable gate of the network, or a gate beacon on the game's network. */
     static boolean exitUsable(SectorEntityToken g, boolean bf) {
-        return usable(g, bf) || (!bf && beacon(g));
+        if (bf) return bifrostExit(g);
+        return usable(g, false) || beacon(g);
+    }
+
+    /** A Bifrost gate that can be a transit's exit: not used ($used). AoTD's destination picker checks only that and the section. */
+    static boolean bifrostExit(SectorEntityToken g) {
+        if (g == null || g.isExpired() || g.getContainingLocation() == null) return false;
+        return BIFROST_TYPE.equals(g.getCustomEntityType()) && !Boolean.TRUE.equals(g.getMemoryWithoutUpdate().get(BF_USED));
     }
 
     /** Bifrost gates that can be used now, with a Bifrost Control Center: gates of active sections only, as AoTD offers. */
@@ -603,7 +646,8 @@ public final class BAGates {
         Set<SectorEntityToken> act = bifrostActive();
         List<SectorEntityToken> out = new ArrayList<SectorEntityToken>();
         for (SectorEntityToken g : Global.getSector().getCustomEntitiesWithTag(BIFROST_TAG)) {
-            if (usable(g, true) && (act == null || act.contains(g)) && !skipPulsar(g)) out.add(g);
+            // exits need only bifrostExit; best() takes a gate as an entry only when it is usable
+            if (bifrostExit(g) && (act == null || act.contains(g)) && !skipPulsar(g)) out.add(g);
         }
         return out;
     }

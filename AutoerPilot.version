@@ -5,7 +5,7 @@
   "modVersion": {
     "major": 0,
     "minor": 1,
-    "patch": 28
+    "patch": 29
   },
   "directDownloadURL": "https://github.com/Mjolniar/auto-er-pilot/releases/latest/download/AutoerPilot.zip",
   "changelogURL": "https://raw.githubusercontent.com/Mjolniar/auto-er-pilot/main/CHANGELOG.md"

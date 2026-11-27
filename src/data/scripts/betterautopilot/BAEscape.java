@@ -9,6 +9,7 @@ import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.characters.AbilityPlugin;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.impl.campaign.abilities.BaseToggleAbility;
 import com.fs.starfarer.api.impl.campaign.abilities.EmergencyBurnAbility;
 import com.fs.starfarer.api.impl.campaign.terrain.EventHorizonPlugin;
 import com.fs.starfarer.api.impl.campaign.terrain.PulsarBeamTerrainPlugin;
@@ -52,10 +53,11 @@ final class BAEscape {
     boolean inWind() { return inWind; }
 
     /**
-     * Every unpaused frame with the step the fleet flies itself to (null while the player steers or the game is busy).
+     * Every unpaused frame with the step the fleet flies itself to (null while the player steers or the game is busy, for
+     * targets switched off in Targets and for fleets) and the distance to where the trip ends (goalDist).
      * True while an escape jump is under way: the steering stays off then.
      */
-    boolean check(CampaignFleetAPI fleet, CampaignUIAPI ui, SectorEntityToken step, float amount, BAAbilities abilities) {
+    boolean check(CampaignFleetAPI fleet, CampaignUIAPI ui, SectorEntityToken step, float goalDist, float amount, BAAbilities abilities) {
         inWind = false;
         if (jumpedFrom != null) return afterJump(fleet, ui, amount);
         if (!BASettings.enabled || step == null || fleet.isInHyperspace() || !(fleet.getContainingLocation() instanceof StarSystemAPI)) {
@@ -66,7 +68,7 @@ final class BAEscape {
         if (wind == null) { reset(); return false; }
         inWind = true;
         if (step != lastStep) { reset(); lastStep = step; }
-        float dist = Misc.getDistance(fleet, step);
+        float dist = goalDist;
         AbilityPlugin sb = BAAbilities.activeSB(fleet);
         boolean sbOn = sb != null;
         String what = wind instanceof PulsarBeamTerrainPlugin ? "a pulsar beam"
@@ -108,7 +110,7 @@ final class BAEscape {
         AbilityPlugin eb = BAAbilities.emergencyBurn(fleet);
         if (eb == null) return "not known";
         if (!eb.isUsable()) return "on cooldown or short of fuel";
-        if (BAAbilities.otherActive(fleet, eb)) return "another ability is on that it does not go with";
+        if (blocked(fleet, eb)) return "another ability is on that it does not go with";
         for (FleetMemberAPI m : fleet.getFleetData().getMembersListCopy()) {
             if (Math.round(m.getRepairTracker().getCR() * 100f) < Math.round(EmergencyBurnAbility.getCRCost(m, fleet) * 100f)) {
                 return m.getShipName() + " has less CR than it costs";
@@ -116,6 +118,22 @@ final class BAEscape {
         }
         eb.activate();
         return eb.isUsable() ? "it did not start" : null;   // usable afterwards: it did not start
+    }
+
+    /**
+     * An ability that keeps Emergency Burn from starting: one the game does not allow with it that is winding up or in use,
+     * or Go Dark (the player's choice). Other toggles that are on (Neutrino Detector, Sustained Burn) are turned off by the
+     * game when Emergency Burn starts (BaseDurationAbility interruptIncompatible).
+     */
+    static boolean blocked(CampaignFleetAPI fleet, AbilityPlugin eb) {
+        if (eb.getSpec() == null) return false;
+        for (AbilityPlugin o : fleet.getAbilities().values()) {
+            if (o == null || o == eb || o.getSpec() == null || !o.isActiveOrInProgress()) continue;
+            if (BAAbilities.compatible(eb.getSpec(), o.getSpec())) continue;
+            if (o instanceof BaseToggleAbility && o.isActive() && !BAAbilities.GO_DARK.equals(o.getId())) continue;
+            return true;
+        }
+        return false;
     }
 
     private boolean transverseJump(CampaignFleetAPI fleet, SectorEntityToken step) {

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.29
+- Log: Debug log state lines are written once a state holds for 1 second. States that flip back and forth within a second are not each written.
+- Coronas and pulsar beams: The escape steps run only for targets switched on in the Targets tab. They do not run while flying to a fleet.
+- Coronas and pulsar beams: Progress is measured toward where the trip ends. For a course to a star, that is the stop point outside its corona.
+- Emergency Burn: Fixed Emergency Burn being skipped while the Neutrino Detector or another toggle was on. The game turns those off when it starts. Go Dark still blocks it.
+- Transverse Jump: Fixed the wait after a Transverse Jump staying set when the mod was turned off and on during the wait.
+- Sustained Burn: Not turned on in hyperspace with no fuel.
+- Gate routes: A route ends when its target is gone, and the course to the entry gate is cleared.
+- Gate routes: A transit through the game's own gate dialog ends the route and lays in the course to the target.
+- Gate routes: When the shortest route needs more fuel than the fleet has, the next network's route is tried.
+- Gate routes: The fuel estimate includes the jumps out of a system before the entry gate and after the exit gate.
+- Bifrost: An exit gate only has to be unused, as in AoTD. The entry gate still has to be supplied and not cooling down.
+- Wormholes: The jump pay step is skipped on game versions that do not have it.
+- Steering: A detour point inside another obstacle switches to the other side of the circle when that side is clear.
+- Steering: Fixed the way out of a circle when the fleet is at its centre.
+- Slipstreams: The fleet lines up before a crossing that is further along the stream. Crossings the fleet is already past on a curved stream are not picked.
+- Performance: The hyperspace anchor check runs only for targets in hyperspace.
+
 ## 0.1.28
 - Settings: Added a Targets tab in LunaLib with a switch for each kind of target: planets, colonies, stars, stations, abandoned stations, research stations, mining stations, orbital habitats, derelict ships, caches and cargo pods, debris fields, Domain-era derelicts, relays, buoys and arrays, stable locations, warning beacons, everything else, jump points, gates, star systems and map points, hostile fleets and other fleets.
 - Settings: Defaults are unchanged. Planets, colonies, stars, jump points, gates and star systems are on. The rest are off.
