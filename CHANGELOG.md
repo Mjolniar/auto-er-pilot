@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.31
+- Pulsar beams: No Transverse Jump out of a beam while Go Dark is on.
+- Jump points: While the fleet waits out a pulsar beam at a jump point, storms, slipstreams and stronger hostile fleets on the way to the wait point are handled as on any trip.
+- Hazards: A corona or event horizon next to the target is no longer left out of the route. Its circle stops short of the target.
+- Hazards: With a star as the target, the stop point is moved along the corona's edge out of a second star's corona.
+- Storms: A storm detour keeps its circle for 2 seconds while the storm's cells change. The fleet no longer turns back into the storm when a new circle reaches it.
+- Storms: Fixed no slow-down at faint slipstream edges.
+- Routing: The side picked around an obstacle is kept while the fleet is at its edge.
+- Slipstreams: With "Use slipstreams" off, the fleet still gets off a stream it ends up in at the best point. It no longer rides to the stream's end.
+- Slipstreams: A crossing under way goes on when Reverse Polarity becomes usable mid-stream. No paid switch inside the stream.
+- Slipstreams: A crossing planned before entering another stream is dropped.
+- Sustained Burn: Turned off by the player, it stays off for that target after a save and load.
+- Gate routes: When a gate of the route is removed (a Bifrost gate whose colony is lost), the course to the target is laid in.
+- Gate routes: No route starts at a gate a mission marks, such as the Magec gate in At the Gates. Its own dialog opens there.
+- Gate routes: No route starts at a gate with its own dialog from another mod, such as Gladiator Society's pit gates. They can still be the exit.
+- Wormholes: No wormhole route to a terminus where the game would ask about the transponder.
+- Targets: Other mods' entities are sorted by their type id: research, mining, habitat, cryosleeper, hypershunt (tap), crate and wreckage.
+- Performance: The slipstream and wind hazard tests run on plan ticks, not every frame.
+
 ## 0.1.30
 - Jump points: Added "Wait out pulsar beams at jump points" (on by default). When the exit of a jump point or gravity well is in a pulsar beam, the fleet waits short of it until the beam has turned past, then jumps. After 10 days it jumps anyway.
 - Sustained Burn: Goes off once within 2000 units of where the trip ends, as NPC fleets do. Not while chasing a fleet. Turned on again after that, it stays on.

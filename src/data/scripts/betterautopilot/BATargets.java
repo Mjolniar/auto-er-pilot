@@ -13,6 +13,8 @@ import com.fs.starfarer.api.impl.campaign.ids.Entities;
 import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.impl.campaign.terrain.DebrisFieldTerrainPlugin;
 
+import java.util.Locale;
+
 /**
  * Target categories for the Targets settings tab. Each entity the fleet can fly to falls in one category; the steering
  * runs only for categories switched on (BASettings.targets, ids and defaults in BASettings.TARGET_IDS/TARGET_DEFAULTS).
@@ -73,7 +75,18 @@ final class BATargets {
         if (Entities.CORONAL_TAP.equals(type)) return HYPERSHUNTS;
         MarketAPI m = e.getMarket();
         if (m != null && m.hasCondition(Conditions.ABANDONED_STATION)) return ABANDONED;
-        if (e.hasTag(Tags.STATION) || (m != null && !m.isPlanetConditionMarketOnly())) return STATIONS;
+        boolean colony = m != null && !m.isPlanetConditionMarketOnly();
+        if (!colony) {
+            // other mods' types, by their id (e.g. dpl_station_research, arondight_habitat, dpl_damaged_tap, uaf_crate)
+            String t = type.toLowerCase(Locale.ROOT);
+            if (t.contains("research")) return RESEARCH;
+            if (t.contains("mining")) return MINING;
+            if (t.contains("habitat")) return HABITATS;
+            if (t.contains("cryosleeper")) return CRYOSLEEPERS;
+            if (t.contains("hypershunt") || t.endsWith("_tap")) return HYPERSHUNTS;
+            if (t.contains("crate") || t.contains("wreckage")) return CACHES;
+        }
+        if (e.hasTag(Tags.STATION) || colony) return STATIONS;
         // salvageable objects that fit no switch above, such as other mods' derelict stations
         if (e.hasTag(Tags.SALVAGEABLE)) return SALVAGE;
         if (e.hasTag(Tags.OBJECTIVE)) return OBJECTIVES;

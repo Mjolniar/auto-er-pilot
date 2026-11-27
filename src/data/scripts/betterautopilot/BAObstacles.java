@@ -49,18 +49,28 @@ final class BAObstacles {
             Vector2f c = terrain.getLocation();
             float r = effectRadius(p, c, q);
             if (r <= 0f) continue;
-            float rr = r + margin + (careful ? 200f : 0f);
-            if (BAGeom.dist(t.x, t.y, c.x, c.y) <= rr + step.getRadius()) continue;
+            float rr = capped(r + margin + (careful ? 200f : 0f), r, BAGeom.dist(t.x, t.y, c.x, c.y), step.getRadius());
+            if (rr <= 0f) continue;
             out.add(new BAGeom.Circle(c.x, c.y, rr, terrain, "hazard"));
           } catch (Throwable e) { bad(terrain, e); }
         }
         for (PlanetAPI pl : loc.getPlanets()) {
             if (!pl.isStar() || pl == step) continue;
             Vector2f c = pl.getLocation();
-            float rr = pl.getRadius() + margin;
-            if (BAGeom.dist(t.x, t.y, c.x, c.y) <= rr + step.getRadius()) continue;
+            float rr = capped(pl.getRadius() + margin, pl.getRadius(), BAGeom.dist(t.x, t.y, c.x, c.y), step.getRadius());
+            if (rr <= 0f) continue;
             out.add(new BAGeom.Circle(c.x, c.y, rr, pl, "star"));
         }
+    }
+
+    /**
+     * A hazard circle's radius with the target dT from its centre: 0 (left out) when the target is inside the hazard
+     * itself (radius r), else rr, made smaller where needed so the circle stops short of the target (a planet close to
+     * a star's corona: the way still goes around the corona).
+     */
+    static float capped(float rr, float r, float dT, float targetRadius) {
+        if (dT <= r) return 0f;
+        return Math.max(0f, Math.min(rr, dT - targetRadius - 1f));
     }
 
     /**

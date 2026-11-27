@@ -45,6 +45,11 @@ final class BAEscape {
     private LocationAPI jumpedFrom;
     private String jumpedFor;
     private float waitJump;
+    /** The wind hazard found at the last test, where, and seconds to the next test. */
+    private CampaignTerrainPlugin windCache;
+    private LocationAPI windLoc;
+    private float windIn;
+    static final float WIND_EVERY = 0.25f;
 
     /** An escape jump was ordered and the fleet is not in hyperspace yet. */
     boolean busy() { return jumpedFrom != null; }
@@ -62,9 +67,17 @@ final class BAEscape {
         if (jumpedFrom != null) return afterJump(fleet, ui, amount);
         if (!BASettings.enabled || step == null || fleet.isInHyperspace() || !(fleet.getContainingLocation() instanceof StarSystemAPI)) {
             reset();
+            windIn = 0f;   // tested again at once next time
             return false;
         }
-        CampaignTerrainPlugin wind = windHolding(fleet);
+        // the terrain test four times a second (it copies the system's terrain list), again at once in a new location
+        windIn -= amount;
+        if (windIn <= 0f || windLoc != fleet.getContainingLocation()) {
+            windIn = WIND_EVERY;
+            windLoc = fleet.getContainingLocation();
+            windCache = windHolding(fleet);
+        }
+        CampaignTerrainPlugin wind = windCache;
         if (wind == null) { reset(); return false; }
         inWind = true;
         if (step != lastStep) { reset(); lastStep = step; }
@@ -143,6 +156,14 @@ final class BAEscape {
                 noted = true;
                 BAScript.LOG.info("Auto-er Pilot: held in a pulsar beam on the way to " + step.getName() + "; Transverse Jump "
                         + (tj == null ? "not known" : "not usable (fuel or cooldown)"));
+            }
+            return false;
+        }
+        // Go Dark (the player's choice) or another ability the jump would end: no jump
+        if (blocked(fleet, tj)) {
+            if (!noted) {
+                noted = true;
+                BAScript.LOG.info("Auto-er Pilot: held in a pulsar beam on the way to " + step.getName() + "; Transverse Jump skipped: Go Dark or another ability is on that it does not go with");
             }
             return false;
         }

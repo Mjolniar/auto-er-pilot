@@ -2,6 +2,7 @@ package data.scripts.betterautopilot;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.characters.AbilityPlugin;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
@@ -130,7 +131,10 @@ final class BAAbilities {
         AbilityPlugin sb = act != null ? act : sustainedBurn(fleet);
         boolean on = act != null;
         if (on && !sbWas) {
-            if (!sbOnHere) sbPlayerOff = false;   // the player (or the game) turned it on
+            if (!sbOnHere) {   // the player (or the game) turned it on
+                sbPlayerOff = false;
+                fleet.getMemoryWithoutUpdate().unset(SB_OFF_FOR);
+            }
             sbOnHere = false;
             sbRestore = false;
         }
@@ -143,7 +147,12 @@ final class BAAbilities {
                         + Math.round(QUICK_OFF_WAIT) + " seconds");
             }
             sbOffHere = false;
-            if (byPlayer) sbPlayerOff = true;
+            if (byPlayer) {
+                sbPlayerOff = true;
+                // kept in the fleet's memory with the target, so a save and load keeps it off for this target
+                // (not for a fleet: the save would keep it after it despawns)
+                if (target != null && !(target instanceof CampaignFleetAPI)) fleet.getMemoryWithoutUpdate().set(SB_OFF_FOR, target);
+            }
             if (BASettings.debug) {
                 BAScript.LOG.info("Auto-er Pilot: Sustained Burn turned off" + (byPlayer ? " by the player" : " by the game or another ability"));
             }
@@ -165,7 +174,21 @@ final class BAAbilities {
     /** A key (not Shift, Ctrl, Alt or Space) or mouse button was pressed within ns nanoseconds. */
     boolean inputWithin(long ns) { return System.nanoTime() - inputAt < ns; }
 
-    void newTarget() { sbPlayerOff = false; sbRestore = false; nearOff = false; }
+    void newTarget(CampaignFleetAPI fleet, SectorEntityToken step) {
+        sbRestore = false;
+        nearOff = false;
+        target = step;
+        // the player's turn-off for this target, from before a save and load
+        MemoryAPI m = fleet.getMemoryWithoutUpdate();
+        Object off = m.get(SB_OFF_FOR);
+        sbPlayerOff = off != null && off == step;
+        if (off != null && off != step) m.unset(SB_OFF_FOR);
+    }
+
+    /** The target the fleet flies itself to (set by newTarget). */
+    private SectorEntityToken target;
+    /** Player fleet memory: the target the player turned Sustained Burn off for. */
+    static final String SB_OFF_FOR = "$better_autopilot_sbOffFor";
 
     /** Sustained Burn was turned off near this target once (turned on again after that, it stays on). */
     private boolean nearOff;

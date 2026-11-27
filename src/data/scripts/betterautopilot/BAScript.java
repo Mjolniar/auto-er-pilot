@@ -86,6 +86,12 @@ public class BAScript implements EveryFrameScript {
     private boolean fleetNear;
     /** The last plan rode a slipstream with its flow, lined up with it and away from its edges (Sustained Burn may go on). */
     private boolean rideSB;
+    /** The fleet was inside a slipstream at the last plan (the game's test runs over every stream, so not each frame). */
+    private boolean inStreamNow;
+    /** The last storm circle and seconds since it was found; kept STORM_KEEP seconds while the fleet is outside it. */
+    private BAGeom.Circle lastStorm;
+    private float lastStormAge;
+    static final float STORM_KEEP = 2f;
     /** The slipstream the fleet is leaving: Sustained Burn is not turned on again inside it. */
     private SlipstreamTerrainPlugin2 leftStream;
     /** Riding with Sustained Burn: the fleet's course within this many degrees of the flow, inside this share of the half width. */
@@ -211,7 +217,8 @@ public class BAScript implements EveryFrameScript {
             stickySide = 0;
             entering = null;
             cross.reset();
-            abilities.newTarget();
+            lastStorm = null;
+            abilities.newTarget(fleet, step);
             statusIn = 0f;
             listObstacles = true;
             if (BASettings.debug) LOG.info("Auto-er Pilot: target " + step.getName()
@@ -234,7 +241,7 @@ public class BAScript implements EveryFrameScript {
         Vector2f fp = fleet.getLocation();
         float left = BAGeom.dist(fp.x, fp.y, goalX, goalY);
         abilities.keepSustainedBurn(fleet, left,
-                slow || slipBusy || fleetNear || slipExitLeft > 0f || escape.inWind() || (fleet.isInHyperspace() && Misc.isInsideSlipstream(fleet)),
+                slow || slipBusy || fleetNear || slipExitLeft > 0f || escape.inWind() || (fleet.isInHyperspace() && inStreamNow),
                 rideSB, amount);
         // close to where the trip ends: Sustained Burn off, as NPC fleets do (not while chasing a fleet)
         if (BASettings.keepSB && !(step instanceof CampaignFleetAPI) && goalStep == step) abilities.offNear(fleet, left);
@@ -355,16 +362,15 @@ public class BAScript implements EveryFrameScript {
         String why = "straight to the target";
         String slowText = null;
 
-        // a jump point whose exit is in a pulsar beam: wait short of it until the beam has passed (BAJumpWait)
+        // a jump point whose exit is in a pulsar beam: the wait point short of it is the goal until the beam has passed
+        // (BAJumpWait); storms, slipstreams and fleets on the way to it are handled as for any goal
         float[] wait = BASettings.jumpPulsarWait ? jumpWait.hold(fleet, step, speed, brake) : null;
         if (wait != null) {
-            goalX = wait[0];
-            goalY = wait[1];
-            aimX = wait[0];
-            aimY = wait[1];
-            override = true;
-            note("waiting: pulsar beam at the exit of " + step.getName());
-            return;
+            tx = wait[0];
+            ty = wait[1];
+            goalX = tx;
+            goalY = ty;
+            why = "waiting: pulsar beam at the exit of " + step.getName();
         }
 
         // slipstreams
@@ -387,7 +393,8 @@ public class BAScript implements EveryFrameScript {
         if (!inStream) paidSwitches = 0;
 
         // no storms inside a slipstream (the game keeps them off there, and go-slow would cut the stream's push)
-        HyperspaceTerrainPlugin h = hyper && in == null && !inStream ? BAStorms.plugin(loc) : null;
+        HyperspaceTerrainPlugin h = hyper && in == null ? BAStorms.plugin(loc) : null;
+        inStreamNow = inStream;
 
         // storms: slow down inside or ahead of storming and signaling cells (in slipstreams the game keeps storms off)
         if (h != null && BASettings.storms) {
@@ -409,14 +416,14 @@ public class BAScript implements EveryFrameScript {
         // a star, black hole or a point inside a corona or event horizon: stop outside it and end the course there; the
         // way to the stop point goes around other hazards and fleets like any other
         float bx = tx, by = ty;
-        boolean away = false;
+        boolean away = wait != null;
         BAGeom.Circle hold = !hyper && BASettings.hazards && hazardousTarget(step) ? BAObstacles.holding(loc, fleet, step) : null;
         if (hold != null) {
-            float d = BAGeom.dist(px, py, hold.x, hold.y);
-            float ux, uy;
-            if (d > 1f) { ux = (px - hold.x) / d; uy = (py - hold.y) / d; }
-            else { ux = 1f; uy = 0f; }
-            float sx = hold.x + ux * hold.r, sy = hold.y + uy * hold.r;
+            // the stop point on the side facing the fleet, moved along the circle out of other hazards (a close binary star)
+            List<BAGeom.Circle> others = new ArrayList<BAGeom.Circle>();
+            BAObstacles.hazards(loc, fleet, step, others);
+            float[] s = BAGeom.stopPoint(hold, px, py, others);
+            float sx = s[0], sy = s[1];
             goalX = sx;
             goalY = sy;
             if (BAGeom.dist(px, py, sx, sy) < 150f + fleet.getRadius() * 0.5f && speed < 40f) {
@@ -438,7 +445,7 @@ public class BAScript implements EveryFrameScript {
         }
 
         // final approach: the game's own, slowed down in asteroids
-        else if (BAGeom.dist(px, py, tx, ty) < step.getRadius() + fleet.getRadius() + 400f) {
+        else if (wait == null && BAGeom.dist(px, py, tx, ty) < step.getRadius() + fleet.getRadius() + 400f) {
             if (rocks && asteroidsAhead(loc, fleet, px, py, tx, ty, speed, vf, brake)) { slow = true; slowText = "asteroids: moving slowly"; why = slowText; }
             why = holdSlow(why, slowText);
             note(slow ? why : "final approach");
@@ -449,7 +456,10 @@ public class BAScript implements EveryFrameScript {
         if (in != null) {
             entering = null;
             slipBusy = true;
-            if (BASettings.slipAvoid && noRp && cross.stream() == in.s) {
+            // a crossing planned for another stream is over; one under way in this stream goes on (also once Reverse
+            // Polarity is usable again, which would cost a paid switch inside)
+            if (cross.stream() != null && cross.stream() != in.s) cross.reset();
+            if (BASettings.slipAvoid && cross.stream() == in.s) {
                 BACross.Step cs = cross.plan(streams, fleet, px, py, tx, ty, vf, rev);
                 if (cs != null && cs.circle == null) {
                     bx = cs.x;
@@ -461,13 +471,13 @@ public class BAScript implements EveryFrameScript {
                 }
             }
             if (crossing) { /* straight across, below */ }
-            else if (!BASettings.slipUse) riding = true;
             else {
+                // getting off where the trip ends up shortest, also with "Use slipstreams" off (that only stops getting on)
                 float[] leave = BASlip.leavePoint(in, fleet, tx, ty, vf, rev);
                 String skipped = "";
                 // carried away from the target (flow more than RP_ANGLE degrees off), or riding the other way beats
                 // leaving: switch Reverse Polarity at once (on, or off when it was turned on here)
-                if (rp != null && BASettings.slipReverseInside && rpHold <= 0f && (!rev || abilities.rpMine)
+                if (BASettings.slipUse && rp != null && BASettings.slipReverseInside && rpHold <= 0f && (!rev || abilities.rpMine)
                         && paidSwitches < MAX_PAID_SWITCHES) {
                     float[] f = BASlip.flow(in.s, in.along, rev);
                     // not at the stream's edge (outer fifth of its width), where the fleet is about out anyway
@@ -514,6 +524,7 @@ public class BAScript implements EveryFrameScript {
             entering = BASlip.chosen;
             BASlip.chosen = null;   // static: holding the stream would keep this save in memory after loading another
             if (e != null) {
+                cross.reset();   // a crossing planned before is not resumed after this stream
                 bx = e[0];
                 by = e[1];
                 away = true;
@@ -521,7 +532,7 @@ public class BAScript implements EveryFrameScript {
                 wantRev = BASlip.chosenRev;
                 why = wantRev ? "slipstream: entering with Reverse Polarity" : "slipstream: entering";
                 // switch before the stream, where it costs nothing
-                if (rp != null && rpHold <= 0f && !Misc.isInsideSlipstream(fleet)) {
+                if (rp != null && rpHold <= 0f && !inStream) {
                     if (wantRev && !rp.isActive() && BAAbilities.safeToSwitch(fleet, rp)) {
                         abilities.rpOn(rp, "entering a slipstream against its flow");
                         rpHold = 3f;
@@ -533,7 +544,7 @@ public class BAScript implements EveryFrameScript {
             }
         }
         // a slipstream across the way ahead: polarity set before reaching it, where switching costs nothing
-        if (in == null && !slipBusy && rp != null && !streams.isEmpty() && rpHold <= 0f && !Misc.isInsideSlipstream(fleet)) {
+        if (in == null && !slipBusy && rp != null && !streams.isEmpty() && rpHold <= 0f && !inStream) {
             float dx, dy;
             if (speed > 50f) { dx = v.x / speed; dy = v.y / speed; }
             else {
@@ -577,7 +588,7 @@ public class BAScript implements EveryFrameScript {
         // out of the streams with nothing reversed ahead: turn off what was turned on here (free outside a stream), also
         // when a setting change took Reverse Polarity out of the steering (rp null)
         AbilityPlugin rpOwn = rp != null ? rp : fleet.getAbility(BAAbilities.RP);
-        if (in == null && !wantRev && rpOwn != null && abilities.rpMine && rpHold <= 0f && !Misc.isInsideSlipstream(fleet)) {
+        if (in == null && !wantRev && rpOwn != null && abilities.rpMine && rpHold <= 0f && !(hyper && inStream)) {
             abilities.rpOff(rpOwn, "out of the slipstream");
         }
 
@@ -590,6 +601,12 @@ public class BAScript implements EveryFrameScript {
         fleetNear = BAObstacles.strongerNear(loc, fleet, FLEE_SECONDS);
         if (h != null && BASettings.stormDetour) {
             BAGeom.Circle storm = BAStorms.detour(h, fleet.getRadius(), px, py, bx, by, BASettings.stormDetourShare / 100f, STEP);
+            lastStormAge += PLAN_EVERY;
+            if (storm != null) { lastStorm = storm; lastStormAge = 0f; }
+            // the storm's circle changes with its cells: the last one is kept a moment while the fleet is outside it, so
+            // the detour does not end each time a new circle reaches the fleet
+            else if (lastStorm != null && lastStormAge < STORM_KEEP && BAGeom.dist(px, py, lastStorm.x, lastStorm.y) > lastStorm.r
+                    && BAGeom.dist(bx, by, lastStorm.x, lastStorm.y) > lastStorm.r) storm = lastStorm;
             if (storm != null) circles.add(storm);
         }
         if (slipCircle != null) circles.add(slipCircle);
@@ -606,8 +623,9 @@ public class BAScript implements EveryFrameScript {
         }
         BAGeom.Route r = BAGeom.route(px, py, bx, by, circles, stickyKey, stickySide, STEP);
         if (r.around != null) {
+            // inside the circle the side comes back 0: the side picked before is kept
+            if (r.side != 0 || r.around.key != stickyKey) stickySide = r.side;
             stickyKey = r.around.key;
-            stickySide = r.side;
             why = "around " + BAObstacles.name(r.around);
         }
         float wx = r.x, wy = r.y;

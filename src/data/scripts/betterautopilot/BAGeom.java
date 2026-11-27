@@ -67,6 +67,30 @@ public final class BAGeom {
     }
 
     /**
+     * The stop point outside circle hold: the point on it facing P, or the nearest one along it (10 degree steps, both
+     * ways) that lies outside every circle in others. The facing point when none is clear.
+     */
+    public static float[] stopPoint(Circle hold, float px, float py, java.util.List<Circle> others) {
+        float d = dist(px, py, hold.x, hold.y);
+        double a0 = d > 1f ? Math.atan2(py - hold.y, px - hold.x) : 0.0;
+        for (int k = 0; k <= 18; k++) {
+            for (int sgn = -1; sgn <= 1; sgn += 2) {
+                if (k == 0 && sgn > 0) continue;
+                double a = a0 + sgn * k * Math.PI / 18.0;
+                float x = hold.x + (float) Math.cos(a) * hold.r, y = hold.y + (float) Math.sin(a) * hold.r;
+                boolean clear = true;
+                if (others != null) {
+                    for (Circle c : others) {
+                        if (dist(x, y, c.x, c.y) < c.r) { clear = false; break; }
+                    }
+                }
+                if (clear) return new float[] {x, y};
+            }
+        }
+        return new float[] {hold.x + (float) Math.cos(a0) * hold.r, hold.y + (float) Math.sin(a0) * hold.r};
+    }
+
+    /**
      * Length of the way from P to T around circle C on one side: tangent line, arc, tangent line.
      * side +1 goes counterclockwise around the centre, -1 clockwise. P and T must be outside the circle.
      */

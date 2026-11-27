@@ -17,6 +17,8 @@ import com.fs.starfarer.api.campaign.rules.MemoryAPI;
 import com.fs.starfarer.api.characters.AbilityPlugin;
 import com.fs.starfarer.api.impl.campaign.GateEntityPlugin;
 import com.fs.starfarer.api.impl.campaign.JumpPointInteractionDialogPluginImpl;
+import com.fs.starfarer.api.impl.campaign.ids.MemFlags;
+import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.impl.campaign.rulecmd.missions.GateCMD;
 import com.fs.starfarer.api.impl.campaign.terrain.PulsarBeamTerrainPlugin;
 import com.fs.starfarer.api.util.Misc;
@@ -142,10 +144,12 @@ public final class BAGates {
         boolean saved = fromSave;
         fromSave = false;
         if (stage != NONE && (gone(goal()) || gone(entry()) || gone(exit()))) {
-            LOG.info("Auto-er Pilot: gate route dropped: its target or a gate is gone");
-            // the course still leads to the entry gate: cleared, since the trip it was for is gone
+            boolean goalLeft = !gone(goal());
+            LOG.info("Auto-er Pilot: gate route dropped: " + (goalLeft ? "a gate is gone; course laid in for " + goal().getName() : "its target is gone"));
+            // the course still leads to the entry gate: cleared; with the target still there, its course is laid in
             if (entry() != null && ui.getUltimateCourseTarget() == entry()) ui.clearLaidInCourse();
             restoreGoal = false;
+            if (goalLeft) { finish(); return; }
             clear();
         }
         if (restoreGoal) {
@@ -199,7 +203,7 @@ public final class BAGates {
                 approachCheck -= amount;
                 if (approachCheck <= 0f) {
                     approachCheck = 1f;
-                    String no = blocked(false);
+                    String no = mission(entry()) ? "the gate is part of a mission" : blocked(false);
                     if (no != null) {
                         LOG.info("Auto-er Pilot: gate route to " + goal().getName() + " ended on the way: " + no + "; course laid in for it");
                         finish();
@@ -342,6 +346,11 @@ public final class BAGates {
         return need;
     }
 
+    /** A mission marks e as important ($missionImportant): its own dialog has the mission's options, so no transit from it. */
+    static boolean mission(SectorEntityToken e) {
+        return e != null && e.getMemoryWithoutUpdate().getBoolean(MemFlags.ENTITY_MISSION_IMPORTANT);
+    }
+
     /** A route entity that no longer exists: null, expired or in no location. */
     static boolean gone(SectorEntityToken e) {
         return e == null || e.isExpired() || e.getContainingLocation() == null;
@@ -358,7 +367,10 @@ public final class BAGates {
         Place[] g = new Place[n];
         for (int i = 0; i < n; i++) {
             g[i] = Place.of(gates.get(i));
-            boolean exitOnly = bf ? !usable(gates.get(i), true) : beacon(gates.get(i));
+            // a gate with its own dialog from a mod (Gladiator Society's pit gates) is an exit only: the game's gate list
+            // offers it, but its own dialog has to run when the fleet leaves through it
+            boolean exitOnly = (bf ? !usable(gates.get(i), true) : beacon(gates.get(i)) || gates.get(i).hasTag(Tags.HAS_INTERACTION_DIALOG))
+                    || mission(gates.get(i));
             to[i] = exitOnly ? Float.MAX_VALUE : leg(f, g[i]);
             from[i] = leg(g[i], t);
         }
@@ -379,6 +391,8 @@ public final class BAGates {
         if (stage != TO_ENTRY || target == null || target != entry()) return null;
         CampaignFleetAPI fleet = Global.getSector().getPlayerFleet();
         if (fleet == null || !near(fleet, entry())) return null;
+        // a gate a mission marks (the Magec gate in At the Gates): the game's dialog, for the mission's options
+        if (mission(entry())) return null;
         String why = blocked();
         if (why != null) {
             // no transit now: no gate dialog either, the fleet flies to the target the normal way
@@ -582,6 +596,8 @@ public final class BAGates {
                 for (JumpDestination d : ((JumpPointAPI) e).getDestinations()) {
                     SectorEntityToken x = d == null ? null : d.getDestination();
                     if (x == null || x == e || x.isExpired() || x.getContainingLocation() == null || skipPulsar(x)) continue;
+                    // the game's dialog would ask about the transponder there: no route (blocked() would end it on the way)
+                    if (BAJump.transponderQuestion(x)) continue;
                     Place pout = Place.of(x);
                     float from = leg(pout, t);
                     if (from == Float.MAX_VALUE) continue;
