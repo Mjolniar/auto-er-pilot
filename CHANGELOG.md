@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.30
+- Jump points: Added "Wait out pulsar beams at jump points" (on by default). When the exit of a jump point or gravity well is in a pulsar beam, the fleet waits short of it until the beam has turned past, then jumps. After 10 days it jumps anyway.
+- Sustained Burn: Goes off once within 2000 units of where the trip ends, as NPC fleets do. Not while chasing a fleet. Turned on again after that, it stays on.
+- Gate routes: A transit that can not happen at the entry gate no longer opens the gate dialog. The course to the target is laid in.
+- Gate routes: A route ends on the way to the entry gate once the transit can not happen (fuel, network, settings). Hostile fleets at the exit are checked at the gate.
+- Targets: Domain-era derelicts are split into Survey probes, Survey ships, Motherships, Cryosleepers, Gatehaulers and Coronal hypershunts.
+- Targets: Added Other salvage, for salvageable objects that fit no other switch, such as Industrial Evolution's derelict stations. They were under Everything else.
+
 ## 0.1.29
 - Log: Debug log state lines are written once a state holds for 1 second. States that flip back and forth within a second are not each written.
 - Coronas and pulsar beams: The escape steps run only for targets switched on in the Targets tab. They do not run while flying to a fleet.

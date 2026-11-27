@@ -13,6 +13,12 @@ public class BAGateDialog implements InteractionDialogPlugin {
     static final String LEAVE = "ba_leave";
     private InteractionDialogAPI dlg;
     private boolean pending;
+    /** No transit: the dialog only closes the game's gate dialog (BAGates lays in the course to the target after). */
+    private final boolean skip;
+
+    public BAGateDialog() { this(false); }
+
+    BAGateDialog(boolean skip) { this.skip = skip; }
 
     @Override
     public void init(InteractionDialogAPI dialog) {
@@ -21,11 +27,12 @@ public class BAGateDialog implements InteractionDialogPlugin {
         dialog.setBackgroundDimAmount(0f);
         dialog.hideVisualPanel();
         dialog.setOptionOnEscape("Leave", LEAVE);
-        pending = true;
+        pending = !skip;
     }
 
     @Override
     public void advance(float amount) {
+        if (skip) { close(); return; }
         if (!pending) return;
         pending = false;
         try {

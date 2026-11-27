@@ -22,17 +22,21 @@ final class BATargets {
 
     static final int PLANETS = 0, COLONIES = 1, STARS = 2,
             STATIONS = 3, ABANDONED = 4, RESEARCH = 5, MINING = 6, HABITATS = 7,
-            WRECKS = 8, CACHES = 9, DEBRIS = 10, DERELICTS = 11,
-            OBJECTIVES = 12, STABLE = 13, BEACONS = 14, OTHER = 15,
-            JUMP_POINTS = 16, GATES = 17, SYSTEMS = 18,
-            HOSTILE = 19, FLEETS = 20;
-    static final int COUNT = 21;
+            WRECKS = 8, CACHES = 9, DEBRIS = 10,
+            PROBES = 11, SURVEY_SHIPS = 12, MOTHERSHIPS = 13, CRYOSLEEPERS = 14, GATEHAULERS = 15, HYPERSHUNTS = 16,
+            SALVAGE = 17,
+            OBJECTIVES = 18, STABLE = 19, BEACONS = 20, OTHER = 21,
+            JUMP_POINTS = 22, GATES = 23, SYSTEMS = 24,
+            HOSTILE = 25, FLEETS = 26;
+    static final int COUNT = 27;
 
     /** For the debug log and the reason it does not steer. */
     static final String[] NAMES = {
             "planet", "colony", "star",
             "station", "abandoned station", "research station", "mining station", "orbital habitat",
-            "derelict ship", "cache or cargo pods", "debris field", "Domain-era derelict",
+            "derelict ship", "cache or cargo pods", "debris field",
+            "survey probe", "survey ship", "mothership", "cryosleeper", "gatehauler", "coronal hypershunt",
+            "other salvage",
             "relay, buoy or array", "stable location", "warning beacon", "other object",
             "jump point", "gate", "system or point in space",
             "hostile fleet", "fleet"};
@@ -61,13 +65,17 @@ final class BATargets {
         if (Entities.CARGO_PODS.equals(type) || Entities.CARGO_POD_SPECIAL.equals(type) || type.contains("cache")) return CACHES;
         if (e.hasTag(Tags.DEBRIS_FIELD) || Entities.DEBRIS_FIELD_SHARED.equals(type)
                 || (e instanceof CampaignTerrainAPI && ((CampaignTerrainAPI) e).getPlugin() instanceof DebrisFieldTerrainPlugin)) return DEBRIS;
-        if (Entities.DERELICT_SURVEY_PROBE.equals(type) || Entities.DERELICT_SURVEY_SHIP.equals(type)
-                || Entities.DERELICT_MOTHERSHIP.equals(type) || Entities.DERELICT_CRYOSLEEPER.equals(type)
-                || Entities.DERELICT_GATEHAULER.equals(type) || Entities.CORONAL_TAP.equals(type)
-                || Entities.GENERIC_PROBE.equals(type)) return DERELICTS;
+        if (Entities.DERELICT_SURVEY_PROBE.equals(type) || Entities.GENERIC_PROBE.equals(type)) return PROBES;
+        if (Entities.DERELICT_SURVEY_SHIP.equals(type)) return SURVEY_SHIPS;
+        if (Entities.DERELICT_MOTHERSHIP.equals(type)) return MOTHERSHIPS;
+        if (Entities.DERELICT_CRYOSLEEPER.equals(type)) return CRYOSLEEPERS;
+        if (Entities.DERELICT_GATEHAULER.equals(type)) return GATEHAULERS;
+        if (Entities.CORONAL_TAP.equals(type)) return HYPERSHUNTS;
         MarketAPI m = e.getMarket();
         if (m != null && m.hasCondition(Conditions.ABANDONED_STATION)) return ABANDONED;
         if (e.hasTag(Tags.STATION) || (m != null && !m.isPlanetConditionMarketOnly())) return STATIONS;
+        // salvageable objects that fit no switch above, such as other mods' derelict stations
+        if (e.hasTag(Tags.SALVAGEABLE)) return SALVAGE;
         if (e.hasTag(Tags.OBJECTIVE)) return OBJECTIVES;
         if (e.hasTag(Tags.STABLE_LOCATION) || Entities.STABLE_LOCATION.equals(type)) return STABLE;
         if (e.hasTag(Tags.WARNING_BEACON) || Entities.WARNING_BEACON.equals(type)) return BEACONS;

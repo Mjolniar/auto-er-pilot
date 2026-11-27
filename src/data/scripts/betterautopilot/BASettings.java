@@ -27,7 +27,7 @@ public final class BASettings {
     public static float fleetMargin = 1f;
     public static int fleetClearance = 800;
     public static boolean asteroidsSlow = true;
-    public static boolean pulsarEscape = true, windBurn = true, holdAfterJump = true;
+    public static boolean pulsarEscape = true, windBurn = true, holdAfterJump = true, jumpPulsarWait = true;
     public static boolean autoJump = true, gates = true, bifrost = true, gatesNoPulsar = true, wormholes = true;
     public static int gateSaving = 10;
     public static boolean debug = false;
@@ -36,14 +36,18 @@ public final class BASettings {
     static final String[] TARGET_IDS = {
             "ba_tPlanets", "ba_tColonies", "ba_tStars",
             "ba_tStations", "ba_tAbandoned", "ba_tResearch", "ba_tMining", "ba_tHabitats",
-            "ba_tWrecks", "ba_tCaches", "ba_tDebris", "ba_tDerelicts",
+            "ba_tWrecks", "ba_tCaches", "ba_tDebris",
+            "ba_tProbes", "ba_tSurveyShips", "ba_tMotherships", "ba_tCryosleepers", "ba_tGatehaulers", "ba_tHypershunts",
+            "ba_tSalvage",
             "ba_tObjectives", "ba_tStable", "ba_tBeacons", "ba_tOther",
             "ba_tJumpPoints", "ba_tGates", "ba_tSystems",
             "ba_tHostile", "ba_tFleets"};
     static final boolean[] TARGET_DEFAULTS = {
             true, true, true,
             false, false, false, false, false,
-            false, false, false, false,
+            false, false, false,
+            false, false, false, false, false, false,
+            false,
             false, false, false, false,
             true, true, true,
             false, false};
@@ -90,6 +94,7 @@ public final class BASettings {
         pulsarEscape = bool("ba_pulsarEscape", true);
         windBurn = bool("ba_windBurn", true);
         holdAfterJump = bool("ba_holdAfterJump", true);
+        jumpPulsarWait = bool("ba_jumpPulsarWait", true);
         autoJump = bool("ba_autoJump", true);
         gates = bool("ba_gates", true);
         bifrost = bool("ba_bifrost", true);
@@ -110,7 +115,7 @@ public final class BASettings {
                 + ", keep sustained burn " + keepSB
                 + ", hazards " + hazards + " (" + hazardMargin + ")"
                 + ", fleets " + fleets + " (x" + fleetMargin + ", " + fleetClearance + ")"
-                + ", asteroids " + asteroidsSlow + ", wind burn " + windBurn + ", wait after Transverse Jump " + holdAfterJump + ", pulsar escape " + pulsarEscape + ", jump without dialog " + autoJump
+                + ", asteroids " + asteroidsSlow + ", wind burn " + windBurn + ", wait after Transverse Jump " + holdAfterJump + ", wait out pulsar beams at jump exits " + jumpPulsarWait + ", pulsar escape " + pulsarEscape + ", jump without dialog " + autoJump
                 + ", gates " + gates + " (" + gateSaving + " percent, Bifrost " + bifrost + ", wormholes " + wormholes + ", skip pulsar systems " + gatesNoPulsar + "), debug " + debug
                 + "; steers for: " + (on.length() == 0 ? "nothing" : on));
         return true;

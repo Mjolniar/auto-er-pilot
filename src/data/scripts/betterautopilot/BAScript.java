@@ -66,6 +66,8 @@ public class BAScript implements EveryFrameScript {
     private final BAAbilities abilities = new BAAbilities();
     /** Out of a corona, event horizon or pulsar beam that holds the fleet: normal burn, Emergency Burn, Transverse Jump. */
     private final BAEscape escape = new BAEscape();
+    /** A jump point whose exit is in a pulsar beam: the fleet waits short of it until the beam has passed. */
+    private final BAJumpWait jumpWait = new BAJumpWait();
     /** After a Transverse Jump the player used: the fleet waits until the player resumes the course. */
     private final BAHold hold = new BAHold();
     /** Crossing a slipstream that does not flow toward the target, without a usable Reverse Polarity. */
@@ -230,9 +232,12 @@ public class BAScript implements EveryFrameScript {
         }
         apply(fleet);
         Vector2f fp = fleet.getLocation();
-        abilities.keepSustainedBurn(fleet, BAGeom.dist(fp.x, fp.y, goalX, goalY),
+        float left = BAGeom.dist(fp.x, fp.y, goalX, goalY);
+        abilities.keepSustainedBurn(fleet, left,
                 slow || slipBusy || fleetNear || slipExitLeft > 0f || escape.inWind() || (fleet.isInHyperspace() && Misc.isInsideSlipstream(fleet)),
                 rideSB, amount);
+        // close to where the trip ends: Sustained Burn off, as NPC fleets do (not while chasing a fleet)
+        if (BASettings.keepSB && !(step instanceof CampaignFleetAPI) && goalStep == step) abilities.offNear(fleet, left);
         if (BASettings.debug) {
             statusIn -= amount;
             if (statusIn <= 0f) {
@@ -349,6 +354,18 @@ public class BAScript implements EveryFrameScript {
         float speed = v.length();
         String why = "straight to the target";
         String slowText = null;
+
+        // a jump point whose exit is in a pulsar beam: wait short of it until the beam has passed (BAJumpWait)
+        float[] wait = BASettings.jumpPulsarWait ? jumpWait.hold(fleet, step, speed, brake) : null;
+        if (wait != null) {
+            goalX = wait[0];
+            goalY = wait[1];
+            aimX = wait[0];
+            aimY = wait[1];
+            override = true;
+            note("waiting: pulsar beam at the exit of " + step.getName());
+            return;
+        }
 
         // slipstreams
         List<SlipstreamTerrainPlugin2> streams = hyper && (BASettings.slipUse || BASettings.slipExit || BASettings.slipAvoid)

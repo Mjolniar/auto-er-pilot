@@ -96,6 +96,8 @@ public final class BAGates {
     static final float PLAN_HOLD = 5f;
     /** Lay in the course to goal once no dialog is open (the gate dialog was shown instead of the transit). */
     static boolean restoreGoal;
+    /** Seconds to the next blocked() check on the way to the entry gate. */
+    private static float approachCheck;
     /** The route was taken up from the save this frame (load); its first advance lays in a missing course. */
     static boolean fromSave;
     private static boolean awgNoted;
@@ -192,6 +194,17 @@ public final class BAGates {
                     LOG.info("Auto-er Pilot: gate route to " + goal().getName() + " ended: a gate can not be used now; course laid in for it");
                     finish();
                     return;
+                }
+                // on the way, once a second: a transit that can not happen (fuel, network, settings) ends the route now
+                approachCheck -= amount;
+                if (approachCheck <= 0f) {
+                    approachCheck = 1f;
+                    String no = blocked(false);
+                    if (no != null) {
+                        LOG.info("Auto-er Pilot: gate route to " + goal().getName() + " ended on the way: " + no + "; course laid in for it");
+                        finish();
+                        return;
+                    }
                 }
                 // the gate's dialog opens on arrival (pickDialog). At the gate on the course, not flying by hand, and still
                 // no dialog after ARRIVAL_WAIT: open it here. At the gate with no interaction target after ARRIVAL_WAIT: a
@@ -368,16 +381,20 @@ public final class BAGates {
         if (fleet == null || !near(fleet, entry())) return null;
         String why = blocked();
         if (why != null) {
-            LOG.info("Auto-er Pilot: gate dialog shown at " + where(entry()) + ": " + why + "; course for " + goal().getName() + " laid in after");
+            // no transit now: no gate dialog either, the fleet flies to the target the normal way
+            LOG.info("Auto-er Pilot: no transit at " + where(entry()) + ": " + why + "; course laid in for " + goal().getName());
             stage = NONE;
             restoreGoal = true;
-            return null;
+            return new BAGateDialog(true);
         }
         return new BAGateDialog();
     }
 
     /** Why the transit can not go now, or null. */
-    static String blocked() {
+    static String blocked() { return blocked(true); }
+
+    /** As blocked(), with the hostile fleet check at the exit only when danger is true (on the way it may still change). */
+    static String blocked(boolean danger) {
         if (!BASettings.enabled || !BASettings.gates) return "gate routing off";
         if (wormhole) {
             if (!wormholesOpen()) return "wormholes not usable (no Wormhole Scanner, or the setting is off)";
@@ -399,7 +416,7 @@ public final class BAGates {
             if (cost > Global.getSector().getPlayerFleet().getCargo().getFuel()) return "not enough fuel (" + cost + ")";
         }
         if (skipPulsar(entry()) || skipPulsar(exit())) return "a gate is in a pulsar system";
-        if (BAJump.danger(exit())) return "hostile fleets near " + where(exit());
+        if (danger && BAJump.danger(exit())) return "hostile fleets near " + where(exit());
         return null;
     }
 

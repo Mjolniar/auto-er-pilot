@@ -24,10 +24,11 @@ ba_fleets,Steer around stronger hostile fleets,Boolean,true,,"Steers around host
 ba_fleetMargin,Strength margin,Double,1.0,,A hostile fleet counts as stronger when its effective strength is above yours times this number.,0.1,10,
 ba_fleetClearance,Fleet clearance (units),Int,800,,"How far it stays from stronger hostile fleets, added to both fleets' radii.",0,5000,
 ba_sbHeader,Sustained Burn,Header,Sustained Burn,,,,,
-ba_keepSB,Use Sustained Burn,Boolean,true,,"Turns Sustained Burn on for trips longer than 2000 units and 11 seconds, and back on if the game or another ability turned it off. Also while riding a slipstream with the flow (it goes off when you leave the stream). Not while slowing down, near a slipstream or with a stronger hostile fleet close by. If you turn it off yourself, it stays off until your next target. With SEEKER's Enhanced Sustained Burn, it uses that one. In the Abyssal Depths it uses RAT's Abyssal Burn.",,,
+ba_keepSB,Use Sustained Burn,Boolean,true,,"Turns Sustained Burn on for trips longer than 2000 units and 11 seconds, and back on if the game or another ability turned it off. Also while riding a slipstream with the flow (it goes off when you leave the stream). Not while slowing down, near a slipstream or with a stronger hostile fleet close by. It goes off again within 2000 units of the target, like the NPC fleets do. If you turn it off yourself, it stays off until your next target. With SEEKER's Enhanced Sustained Burn, it uses that one. In the Abyssal Depths it uses RAT's Abyssal Burn.",,,
 ba_jumpHeader,Jumps and gates,Header,Jumps and gates,,,,,
 ba_autoJump,Jump without the dialog,Boolean,true,,"Jumps into and out of star systems without the jump dialog. You'll still get the dialog when the game would warn you about hostile fleets at the exit, ask about your transponder, or you're short on fuel, and for wormholes, unstable jump points and jump points with more than one exit. Fuel and jump pay are the same as a normal jump.",,,
 ba_holdAfterJump,Wait after a Transverse Jump,Boolean,true,,"After you use Transverse Jump yourself, your course stays laid in but the fleet waits where it comes out until you resume it (the autopilot key, or click the target).",,,
+ba_jumpPulsarWait,Wait out pulsar beams at jump points,Boolean,true,,"If the other side of a jump point (or gravity well) is in a pulsar beam, the fleet stops short of it and waits until the beam has turned past, then jumps. After 10 days it jumps anyway.",,,
 ba_gates,Route through gates,Boolean,true,,"A laid-in course goes through two gates of one network when that's at least the percent below and one light year shorter. This needs Travel through the Gate (Janus Device working, At the Gates finished), and it uses scanned active gates, plus gate beacons as exits only (like a Random Assortment of Things settlement with a Gate Beacon). It flies to the entry gate, goes through without the gate dialog at the game's fuel cost, and lays your course back in on the other side. With hostile fleets near the exit gate or not enough fuel, it skips the transit and lays your course back in. Laying in the same course again during a gate route flies direct. It's off while the Autopilot With Gates ability is on.",,,
 ba_bifrost,Use the Bifrost network,Boolean,true,,"With AoTD Vaults of Knowledge and a Bifrost Control Center on a colony, gate routes also use Bifrost gates. The gate you go in through has to be supplied and not cooling down, and the one you come out of just can't be used already, same as in AoTD. A Bifrost transit costs no fuel and puts both gates on a 30-day cooldown, unless a hypershunt powers them.",,,
 ba_wormholes,Use wormholes,Boolean,true,,"With the Wormhole Scanner, gate routes also go through your wormhole termini when that's shorter. It goes through without the dialog at the game's wormhole fuel cost, and it skips a terminus that's still unstable. If your transponder is off and the other side has markets, you get the dialog.",,,
@@ -51,7 +52,13 @@ ba_tSalvageHeader,Salvage,Header,Salvage,,,,,Targets
 ba_tWrecks,Derelict ships,Boolean,false,,Derelict ships you can salvage or recover.,,,Targets
 ba_tCaches,Caches and cargo pods,Boolean,false,,"Supply, equipment, weapon and technology caches, and cargo pods.",,,Targets
 ba_tDebris,Debris fields,Boolean,false,,Debris fields you can salvage.,,,Targets
-ba_tDerelicts,Domain-era derelicts,Boolean,false,,"Survey probes, survey ships, motherships, cryosleepers, gatehaulers and coronal hypershunts.",,,Targets
+ba_tProbes,Survey probes,Boolean,false,,Domain-era survey probes.,,,Targets
+ba_tSurveyShips,Survey ships,Boolean,false,,Derelict Domain-era survey ships.,,,Targets
+ba_tMotherships,Motherships,Boolean,false,,Derelict Domain-era motherships.,,,Targets
+ba_tCryosleepers,Cryosleepers,Boolean,false,,Domain-era cryosleepers.,,,Targets
+ba_tGatehaulers,Gatehaulers,Boolean,false,,Derelict gatehaulers.,,,Targets
+ba_tHypershunts,Coronal hypershunts,Boolean,false,,Coronal hypershunts at stars.,,,Targets
+ba_tSalvage,Other salvage,Boolean,false,,"Stuff you can salvage that doesn't fit another switch, like Industrial Evolution's derelict stations and other mods' derelicts.",,,Targets
 ba_tObjectsHeader,Other objects,Header,Other objects,,,,,Targets
 ba_tObjectives,"Relays, buoys and arrays",Boolean,false,,"Comm relays, nav buoys and sensor arrays, makeshift ones too.",,,Targets
 ba_tStable,Stable locations,Boolean,false,,"Stable locations where you can build a relay, buoy or array.",,,Targets

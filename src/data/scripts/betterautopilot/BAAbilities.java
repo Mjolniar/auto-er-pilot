@@ -165,7 +165,22 @@ final class BAAbilities {
     /** A key (not Shift, Ctrl, Alt or Space) or mouse button was pressed within ns nanoseconds. */
     boolean inputWithin(long ns) { return System.nanoTime() - inputAt < ns; }
 
-    void newTarget() { sbPlayerOff = false; sbRestore = false; }
+    void newTarget() { sbPlayerOff = false; sbRestore = false; nearOff = false; }
+
+    /** Sustained Burn was turned off near this target once (turned on again after that, it stays on). */
+    private boolean nearOff;
+
+    /**
+     * Near where the trip ends (within SB_MIN_DISTANCE), Sustained Burn goes off once per target, as NPC fleets do close
+     * to their destination: normal acceleration for the arrival.
+     */
+    void offNear(CampaignFleetAPI fleet, float left) {
+        if (nearOff || left >= SB_MIN_DISTANCE) return;
+        AbilityPlugin sb = activeSB(fleet);
+        if (sb == null || !sb.isActive()) return;
+        nearOff = true;
+        sbOff(fleet, "close to the target");
+    }
 
     /**
      * The id of an active or winding-up ability with the slow-down tag, or null. Any other such ability comes before Go
