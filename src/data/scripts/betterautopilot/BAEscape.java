@@ -20,8 +20,8 @@ import com.fs.starfarer.api.util.Misc;
  * Getting out of wind hazards: a star corona or black hole event horizon (StarCoronaTerrainPlugin and its subclasses) and
  * a pulsar beam (PulsarBeamTerrainPlugin), which push or pull the fleet. Only while the fleet flies itself to a target.
  * Steps, cheapest first, each after STUCK_SECONDS without PROGRESS units toward the target:
- * 1. normal burn: Sustained Burn off (its acceleration is a fifth, while the corona wind keeps its full strength). Also
- *    at once, without waiting, when the target is within NEAR units. Sustained Burn is not turned on again inside.
+ * 1. normal burn: Sustained Burn off (its acceleration is a fifth, while the corona wind keeps its full strength).
+ *    Sustained Burn is not turned on again inside.
  * 2. Emergency Burn, when usable and every ship has the CR it costs (no ship can take activation damage).
  * 3. pulsar beams only: Transverse Jump into hyperspace. When the course target is in the system it left, the course is
  *    cleared once the fleet is in hyperspace, so it does not fly back into the beam.
@@ -31,8 +31,6 @@ final class BAEscape {
     /** The game's ids (Abilities.TRANSVERSE_JUMP, Abilities.EMERGENCY_BURN). */
     static final String TJ = "fracture_jump", EB = "emergency_burn";
     static final float PROGRESS = 100f, STUCK_SECONDS = 4f;
-    /** Within this distance of the target in a wind hazard, Sustained Burn goes off at once. */
-    static final float NEAR = 2000f;
     /** Seconds to wait for the jump to happen after the ability was used. */
     static final float JUMP_WAIT = 20f;
 
@@ -87,11 +85,6 @@ final class BAEscape {
         String what = wind instanceof PulsarBeamTerrainPlugin ? "a pulsar beam"
                 : (wind instanceof EventHorizonPlugin ? "an event horizon" : "a corona");
 
-        // step 1, at once near the target: normal burn
-        if (BASettings.windBurn && sbOn && dist < NEAR + step.getRadius()) {
-            abilities.sbOff(fleet, "normal burn in " + what + " close to " + step.getName());
-            sbOn = false;
-        }
         if (!stuck.update(dist, amount)) return false;
         stuck.reset();
         // step 1 when held: normal burn

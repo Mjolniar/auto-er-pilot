@@ -243,8 +243,6 @@ public class BAScript implements EveryFrameScript {
         abilities.keepSustainedBurn(fleet, left,
                 slow || slipBusy || fleetNear || slipExitLeft > 0f || escape.inWind() || (fleet.isInHyperspace() && inStreamNow),
                 rideSB, amount);
-        // close to where the trip ends: Sustained Burn off, as NPC fleets do (not while chasing a fleet)
-        if (BASettings.keepSB && !(step instanceof CampaignFleetAPI) && goalStep == step) abilities.offNear(fleet, left);
         if (BASettings.debug) {
             statusIn -= amount;
             if (statusIn <= 0f) {

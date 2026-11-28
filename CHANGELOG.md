@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.32
+- Sustained Burn: Removed the turn-off within 2000 units of the target. It stays on until arrival.
+- Coronas and pulsar beams: Removed the turn-off close to the target. Sustained Burn goes off only when a corona, event horizon or pulsar beam holds the fleet back for 4 seconds.
+
 ## 0.1.31
 - Pulsar beams: No Transverse Jump out of a beam while Go Dark is on.
 - Jump points: While the fleet waits out a pulsar beam at a jump point, storms, slipstreams and stronger hostile fleets on the way to the wait point are handled as on any trip.
